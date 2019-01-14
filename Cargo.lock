@@ -97,7 +97,7 @@ version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "hdr10plus_parse"
+name = "hdr10plus_parser"
 version = "0.1.0"
 dependencies = [
  "bitreader 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,5 +1,5 @@
 [package]
-name = "hdr10plus_parse"
+name = "hdr10plus_parser"
 version = "0.1.0"
 authors = ["quietvoid"]
 edition = "2018"
