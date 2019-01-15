@@ -1,5 +1,5 @@
 pub mod hdr10plus{
-    use std::io::{stdout, stdin, Write, BufRead, BufReader, BufWriter};
+    use std::io::{stdout, Write, BufRead, BufReader, BufWriter};
     use indicatif::{ProgressBar, ProgressStyle};
     use read_byte_slice::{ByteSliceIter, FallibleStreamingIterator};
     use serde_json::Value;
@@ -157,7 +157,7 @@ pub mod hdr10plus{
             let mut average_maxrgb: u16 = 0;
             let mut maxscl: Vec<u16> = Vec::new();
 
-            let mut num_distribution_maxrgb_percentiles: u8 = 0;
+            let mut num_distribution_maxrgb_percentiles: u8;
             let mut distribution_index: Vec<u8> = Vec::new();
             let mut distribution_values: Vec<u32> = Vec::new();
 
