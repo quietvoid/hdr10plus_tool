@@ -5,6 +5,11 @@ messages.
 If dynamic metadata is found, the whole file is parsed through and a 
 metadata JSON file is generated for use with x265/other encoders.
 
-# Usage:
+# Usage, in CLI:
 
 hdr10plus_parser.exe "path/to/file.hevc"
+
+# Sample files
+Tears of Steel samples encoded with x265 using --dhdr10-info for tests.
+
+Sample JSON metadata available here: https://bitbucket.org/multicoreware/x265/downloads/
