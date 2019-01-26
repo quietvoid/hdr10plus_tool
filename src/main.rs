@@ -10,7 +10,7 @@ fn main() {
 
     let mut input = String::new();
 
-    let mut args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect();
 
     if args.is_empty(){
         print!("Enter path to HEVC file: ");
@@ -19,20 +19,20 @@ fn main() {
         match stdin().read_line(&mut input){
             Ok(_) =>{
                 input = input.trim().to_string();
-                process_input(input);
+                process_input(input, args);
             }
             Err(error) => println!("Error: {}", error),
         }
     }
-    else if args.len() == 2{
-        input = args.pop().unwrap();
-        input = input.trim().to_string();
+    else if args.len() >= 2{
+        input = (*args[1].trim()).to_string();
+        println!("{:?}", args);
 
-        process_input(input);
+        process_input(input, args);
     }
 }
 
-fn process_input(input: String){
+fn process_input(input: String, params: Vec<String>){
     let path = Path::new(&input);
     let parent_dir = path.parent().unwrap();
     let save_str = parent_dir.join(path.file_name().unwrap()).to_str().unwrap().to_string();
@@ -51,8 +51,13 @@ fn process_input(input: String){
 
 
         let mut final_metadata: Vec<Metadata> = Vec::new();
-        match parse_metadata(path_str, &log_file){
-            Ok(_) => final_metadata = llc_read_metadata(&log_file),
+        match parse_metadata(path_str, &log_file, params){
+            Ok(o) => {
+                        println!("{}", o);
+                        if o == String::from("Done."){
+                            final_metadata = llc_read_metadata(&log_file);
+                        }
+                     }
             Err(e) => println!("{}", e)
         }
 

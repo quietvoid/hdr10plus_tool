@@ -14,7 +14,7 @@ mod tests {
         let log_file = format!("{}-sei.log", file);
 
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata(file, &log_file){
+        match parse_metadata(file, &log_file, Vec::new()){
             Ok(_) => test = llc_read_metadata(&log_file),
             Err(e) => println!("{}", e)
         }
@@ -38,7 +38,7 @@ mod tests {
         let log_file = format!("{}-sei.log", file);
 
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata(file, &log_file){
+        match parse_metadata(file, &log_file, Vec::new()){
             Ok(_) => test = llc_read_metadata(&log_file),
             Err(e) => println!("{}", e)
         }
@@ -62,7 +62,7 @@ mod tests {
         let log_file = format!("{}-sei.log", file);
 
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata(file, &log_file){
+        match parse_metadata(file, &log_file, Vec::new()){
             Ok(_) => test = llc_read_metadata(&log_file),
             Err(e) => println!("{}", e)
         }
@@ -86,7 +86,7 @@ mod tests {
         let log_file = format!("{}-sei.log", file);
 
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata(file, &log_file){
+        match parse_metadata(file, &log_file, Vec::new()){
             Ok(_) => test = llc_read_metadata(&log_file),
             Err(e) => println!("{}", e)
         }

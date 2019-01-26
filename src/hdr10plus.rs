@@ -18,7 +18,7 @@ pub mod hdr10plus{
         pub num_windows: u8
     }
 
-    pub fn parse_metadata(input: String, log: &String) -> Result<String, std::io::Error>{
+    pub fn parse_metadata(input: String, log: &String, params: Vec<String>) -> Result<String, std::io::Error>{
 
         //Input
         let f = File::open(input).expect("No file found");
@@ -96,6 +96,10 @@ pub mod hdr10plus{
             if !dynamic_detected{
                 pb.finish();
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, "File doesn't contain dynamic metadata, stopping."));
+            }
+            else if params.contains(&String::from("--verify")) {
+                pb.finish();
+                return Ok(String::from("Dynamic HDR10+ metadata detected."));
             }
 
             if cur_byte >= 100000000{
