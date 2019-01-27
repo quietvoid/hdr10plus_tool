@@ -26,7 +26,6 @@ fn main() {
     }
     else if args.len() >= 2{
         input = (*args[1].trim()).to_string();
-        println!("{:?}", args);
 
         process_input(input, args);
     }
