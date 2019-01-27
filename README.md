@@ -9,6 +9,9 @@ metadata JSON file is generated for use with x265/other encoders.
 
 hdr10plus_parser.exe "path/to/file.hevc"
 
+options:
+	--verify  Checks for dynamic metadata only.
+
 # Sample files
 Tears of Steel samples encoded with x265 using --dhdr10-info for tests.
 
