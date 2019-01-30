@@ -60,7 +60,7 @@ pub mod hdr10plus{
                 if dynamic_hdr_sei{
                     let last = current_sei.len() - 1;
 
-                    if current_sei[last-3] == 128 && current_sei[last-2] == 0 && current_sei[last-1] == 0 && current_sei[last] == 1{
+                    if current_sei[last-3] == 128 && current_sei[last-2] == 0 && current_sei[last-1] == 0 && (current_sei[last] == 1 || current_sei[last] == 0){
 
                         let final_sei = &current_sei[7 .. current_sei.len() - 3];
 
@@ -75,6 +75,8 @@ pub mod hdr10plus{
                     }
                 }
                 else if byte == 0 || byte == 1 || byte == 78 || byte == 4{
+                    //println!("{:?}", current_sei);
+
                     for i in 0..current_sei.len(){
                         if current_sei[i] == header[i]{
                             if current_sei == header{
@@ -82,8 +84,12 @@ pub mod hdr10plus{
                                 break;
                             }
                         }
-                        else{
+                        else if current_sei.len() < 3{
                             current_sei.clear();
+                            break;
+                        }
+                        else{
+                            current_sei.pop();
                             break;
                         }
                     }
