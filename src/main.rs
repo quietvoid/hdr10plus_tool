@@ -1,3 +1,4 @@
+use std::io::Read;
 use crate::hdr10plus::hdr10plus::*;
 use std::io::{stdout, stdin, Write};
 use std::path::Path;
@@ -28,7 +29,13 @@ fn main() {
     else if args.len() >= 2{
         input = (*args[1].trim()).to_string();
 
-        process_input(input, args);
+        if input == "-"{
+            println!("Pipe input");
+            process_input(input, args);
+        }
+        else{
+            process_input(input, args);
+        }
     }
 }
 
@@ -40,13 +47,27 @@ fn process_input(input: String, params: Vec<String>){
     let path_str = path.to_str().unwrap().to_string().to_lowercase();
     let regex = Regex::new(r"\.(hevc|.?265)").unwrap();
 
-    if regex.is_match(&path_str) && path.is_file(){
+    if input == "-"{
+        let mut final_metadata: Vec<Metadata> = Vec::new();
+        match parse_metadata_pipe(input, String::from("pipe-sei.log"), params){
+            Ok(o) => {
+                        println!("{}", o);
+                        if o == String::from("Done."){
+                            final_metadata = llc_read_metadata(&String::from("pipe-sei.log"));
+                        }
+                     }
+            Err(e) => println!("{}", e)
+        }
+
+        write_json(String::from("pipe-meta.json"), final_metadata);
+    }
+    else if regex.is_match(&path_str) && path.is_file(){
 
         let log_file = format!("{}-sei.log", save_str);
         let metadata_file = format!("{}-meta.json", save_str);
 
         let mut final_metadata: Vec<Metadata> = Vec::new();
-        match parse_metadata(path_str, &log_file, params){
+        match parse_metadata_file(path_str, &log_file, params){
             Ok(o) => {
                         println!("{}", o);
                         if o == String::from("Done."){

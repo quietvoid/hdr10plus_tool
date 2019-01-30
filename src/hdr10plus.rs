@@ -1,5 +1,5 @@
 pub mod hdr10plus{
-    use std::io::{stdout, Write, BufRead, BufReader, BufWriter};
+    use std::io::{stdout, Write, Read, BufRead, BufReader, BufWriter};
     use indicatif::{ProgressBar, ProgressStyle};
     use read_byte_slice::{ByteSliceIter, FallibleStreamingIterator};
     use serde_json::Value;
@@ -18,7 +18,76 @@ pub mod hdr10plus{
         pub num_windows: u8
     }
 
-    pub fn parse_metadata(input: String, log: &String, params: Vec<String>) -> Result<String, std::io::Error>{
+    pub fn parse_metadata_pipe(input: String, log: String, params: Vec<String>) -> Result<String, std::io::Error>{
+        let stdin = std::io::stdin();
+        let handle = stdin.lock().bytes();
+
+        //BufReader & BufWriter
+        let save_file = File::create("pipe-sei.log").expect("Can't create file");
+        let mut writer = BufWriter::with_capacity(10000000, save_file);
+
+        let header: Vec<u8> = vec![0, 0, 1, 78, 1, 4];
+        let mut current_sei: Vec<u8> = Vec::new();
+        let mut dynamic_hdr_sei = false;
+
+        let mut cur_byte = 0;
+        let mut dynamic_detected = false;
+
+        for b in handle{
+            let byte = b.unwrap();
+
+            cur_byte += 1;
+            current_sei.push(byte);
+
+            if dynamic_hdr_sei{
+                let last = current_sei.len() - 1;
+
+                if current_sei[last-3] == 128 && current_sei[last-2] == 0 && current_sei[last-1] == 0 && (current_sei[last] == 1 || current_sei[last] == 0){
+
+                    let final_sei = &current_sei[7 .. current_sei.len() - 3];
+
+                    if let Err(_) = writeln!(writer, "{:?}", final_sei){
+                        eprintln!("Couldn't write to file");
+                    }
+
+                    current_sei.clear();
+                    dynamic_hdr_sei = false;
+
+                    dynamic_detected = true;
+                }
+            }
+            else if byte == 0 || byte == 1 || byte == 78 || byte == 4{
+
+                for i in 0..current_sei.len(){
+                    if current_sei[i] == header[i]{
+                        if current_sei == header{
+                            dynamic_hdr_sei = true;
+                            break;
+                        }
+                    }
+                    else if current_sei.len() < 3{
+                        current_sei.clear();
+                        break;
+                    }
+                    else{
+                        current_sei.pop();
+                        break;
+                    }
+                }
+            }
+            else if current_sei.len() != 0{
+                current_sei.clear();
+            }
+
+            if cur_byte >= 100000 && !dynamic_detected{
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, "File doesn't contain dynamic metadata, stopping."));
+            }
+        }
+
+        Ok(String::from("Done."))
+    }
+
+    pub fn parse_metadata_file(input: String, log: &String, params: Vec<String>) -> Result<String, std::io::Error>{
 
         //Input
         let f = File::open(input).expect("No file found");
@@ -41,7 +110,6 @@ pub mod hdr10plus{
         let header: Vec<u8> = vec![0, 0, 1, 78, 1, 4];
         let mut current_sei: Vec<u8> = Vec::new();
         let mut dynamic_hdr_sei = false;
-
 
         println!("Parsing HEVC file for dynamic metadata... ");
         stdout().flush().ok();
@@ -75,7 +143,6 @@ pub mod hdr10plus{
                     }
                 }
                 else if byte == 0 || byte == 1 || byte == 78 || byte == 4{
-                    //println!("{:?}", current_sei);
 
                     for i in 0..current_sei.len(){
                         if current_sei[i] == header[i]{
