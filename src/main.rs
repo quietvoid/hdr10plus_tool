@@ -3,6 +3,7 @@ use std::io::{stdout, stdin, Write};
 use std::path::Path;
 use std::process;
 use std::env;
+use regex::Regex;
 
 mod hdr10plus;
 
@@ -36,18 +37,13 @@ fn process_input(input: String, params: Vec<String>){
     let parent_dir = path.parent().unwrap();
     let save_str = parent_dir.join(path.file_name().unwrap()).to_str().unwrap().to_string();
 
+    let path_str = path.to_str().unwrap().to_string().to_lowercase();
+    let regex = Regex::new(r"\.(hevc|.?265)").unwrap();
 
-    if !path.is_file(){
-        println!("Invalid file path.");
-        process::exit(1);
-    }
-
-    let path_str = path.to_str().unwrap().to_string();
-    if path_str.contains(".h265") || path_str.contains(".hevc"){
+    if regex.is_match(&path_str) && path.is_file(){
 
         let log_file = format!("{}-sei.log", save_str);
         let metadata_file = format!("{}-meta.json", save_str);
-
 
         let mut final_metadata: Vec<Metadata> = Vec::new();
         match parse_metadata(path_str, &log_file, params){
@@ -63,6 +59,11 @@ fn process_input(input: String, params: Vec<String>){
         write_json(metadata_file, final_metadata);
     }
     else{
-        println!("Invalid file type.");
+        if !path.is_file(){
+            println!("File path not found.");
+        }
+        else{
+            println!("Invalid file type.");
+        }
     }
 }
