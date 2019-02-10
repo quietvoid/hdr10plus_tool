@@ -11,6 +11,9 @@ metadata JSON file is generated for use with x265/other encoders.
 * ffmpeg -i "input.mkv" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser.exe -
 
 options:
+* -i, --input <INPUT> Sets the input file to use.
+* -o, --output <OUTPUT> Sets the output JSON file to use.
+
 * --verify  Checks for dynamic metadata only.
 
 # Sample files
