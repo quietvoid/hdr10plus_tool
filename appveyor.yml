@@ -37,7 +37,7 @@ deploy:
   - provider: GitHub
     artifact: $(APPVEYOR_PROJECT_NAME)-$(platform)
     auth_token:
-      secure: 'QCk1JOBFqqUAqrTFPYcCLDwYduLYArXmkJCkQAVHNjdUUU5SO0qRP8EnStJnD0OB'
+      secure: 'hY5Mk6KOwgQ97TzEBsM7Woqr1ZIm5QTvHg8EvxMV1x8j3wk/3mNBMqWFFbEIBK0i'
     prerelease: true
     on:
       appveyor_repo_tag: true
