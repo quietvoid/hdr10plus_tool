@@ -1,6 +1,6 @@
 image: Visual Studio 2017
 
- environment:
+environment:
   host: x86_64-pc-windows-msvc        # Triple of host platform
   matrix:
     - platform: x86_64                # Name (is not used other than naming things)
@@ -13,7 +13,7 @@ matrix:
   allow_failures:                     # Allows jobs with these variables to fail
     - platform: arm64
 
- install:
+install:
     - git submodule update --init
     - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe  # Downloads Rustup-init 
     - rustup-init -yv --default-toolchain %channel% --default-host %host%     # Installs Rust
@@ -22,18 +22,18 @@ matrix:
     - cargo -vV                       # Prints Cargo version
     - rustup target add %target%      # Adds target platform to Rust
 
- build_script:
+build_script:
     - cargo build --release --target=%target%      # Builds file defined in Cargo.toml (default main.rs)
 
- test_script:
+test_script:
     - cargo test --target=%target% --verbose       # Runs tests in "src" and "tests" folders
 #    - cargo bench --target=%target% --verbose      # Runs benchmarks in "src/lib.rs"
 
- artifacts:                          
+artifacts:                          
     - path: target\$(target)\release\*$(APPVEYOR_PROJECT_NAME)*.*     # Publishes all files from `cargo build/test/bench --release`
       name: $(APPVEYOR_PROJECT_NAME)-$(platform)                      # Gives it a fancy name
 
- deploy:
+deploy:
   - provider: GitHub
     artifact: $(APPVEYOR_PROJECT_NAME)-$(platform)
     auth_token:
