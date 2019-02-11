@@ -21,3 +21,6 @@ options:
 Tears of Steel samples encoded with x265 using --dhdr10-info for tests.
 
 Sample JSON metadata available here: https://bitbucket.org/multicoreware/x265/downloads/
+
+# Windows builds
+Automated Windows builds can be found on [AppVeyor](https://ci.appveyor.com/project/quietvoid/hdr10plus-parser/history). Select the most recent build from the master branch, where hdr10plus_parser.exe will be available under the artifacts tab.
