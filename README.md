@@ -1,4 +1,5 @@
-# hdr10plus_parser
+# hdr10plus_parser [![Travis Build Status](https://travis-ci.org/quietvoid/hdr10plus_parser.svg?branch=master)](https://travis-ci.org/quietvoid/hdr10plus_parser) [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/quietvoid/hdr10plus_parser?branch=master&svg=true)](https://ci.appveyor.com/project/quietvoid/hdr10plus_parser/history)
+
 Tool to check if a HEVC file contains SMPTE 2094-40 metadata in SEI 
 messages.
 
