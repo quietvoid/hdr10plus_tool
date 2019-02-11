@@ -1,15 +1,16 @@
 language: rust
 rust: beta
 
+matrix:
+  allow_failures:
+    - rust: nightly
+
 jobs:
   include:
-      - name: "Build, Test & Doc"
+      - name: "Linux"
         script:
          - cargo build --release --verbose
          - cargo test --verbose 
-         - cargo doc --verbose
-      - name: "Bench"
-        script: cargo bench --verbose
       - name: "Nightly"
         rust: nightly
         script:
@@ -20,3 +21,5 @@ jobs:
         script: 
          - cargo build --release --verbose
          - cargo test --verbose
+      - name: "Doc"
+        script: cargo doc --verbose
