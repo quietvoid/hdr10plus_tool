@@ -6,17 +6,17 @@ jobs:
       - name: "Build, Test & Doc"
         script:
          - cargo build --release --verbose
-         - cargo test --release --verbose 
+         - cargo test --verbose 
          - cargo doc --verbose
       - name: "Bench"
-        script: cargo bench --release --verbose
+        script: cargo bench --verbose
       - name: "Nightly"
         rust: nightly
         script:
          - cargo build --release --verbose
-         - cargo test --release --verbose 
+         - cargo test --verbose 
       - name: "macOS"
         os: osx
         script: 
          - cargo build --release --verbose
-         - cargo test --release --verbose
+         - cargo test --verbose
