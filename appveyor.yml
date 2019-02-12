@@ -34,7 +34,7 @@ artifacts:
 
 deploy:
   - provider: GitHub
-    artifact: "*.exe"
+    artifact: target\$(target)\release\*$(APPVEYOR_PROJECT_NAME)*.exe
     auth_token:
       secure: 'hY5Mk6KOwgQ97TzEBsM7Woqr1ZIm5QTvHg8EvxMV1x8j3wk/3mNBMqWFFbEIBK0i'
     prerelease: true
