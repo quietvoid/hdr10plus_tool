@@ -31,7 +31,6 @@ test_script:
 
 artifacts:                          
     - path: target\$(target)\release\*$(APPVEYOR_PROJECT_NAME)*.*     # Publishes all files from `cargo build/test/bench --release`
-      name: $(APPVEYOR_PROJECT_NAME)-$(platform)                      # Gives it a fancy name
 
 deploy:
   - provider: GitHub
