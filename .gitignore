@@ -2,3 +2,4 @@
 /assets/*-sei.log
 /assets/*-meta.json
 **/*.rs.bk
+Cargo.lock

@@ -21,7 +21,7 @@ pub mod parser {
     pub fn parse_metadata(input: &str, verify: bool) -> Result<Vec<Vec<u8>>, std::io::Error> {
         //BufReader & BufWriter
         let stdin = std::io::stdin();
-        let mut reader = Box::new(stdin.lock()) as Box<BufRead>;
+        let mut reader = Box::new(stdin.lock()) as Box<dyn BufRead>;
         let bytes_count;
 
         let pb: ProgressBar;
@@ -157,6 +157,7 @@ pub mod parser {
 
     pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
         let maxscl_arr = [1, 3, 6];
+        let correct_indexes = [1, 5, 10, 25, 50, 75, 90, 95, 99];
 
         print!("Reading parsed dynamic metadata... ");
         stdout().flush().ok();
@@ -290,6 +291,9 @@ pub mod parser {
                 bezier_curve_data: bezier_curve_anchors,
             };
 
+            // Make sure indexes are correct
+            assert_eq!(meta.distribution_index, correct_indexes);
+
             complete_metadata.push(meta);
         }
 
@@ -302,7 +306,7 @@ pub mod parser {
         let save_file = File::create(input).expect("Can't create file");
         let mut writer = BufWriter::with_capacity(10_000_000, save_file);
 
-        writeln!(writer, "{{\n\t\"SceneInfo\": [").is_err();
+        assert!(writeln!(writer, "{{\n\t\"SceneInfo\": [").is_ok());
 
         let max_frames = metadata.len() - 1;
 
@@ -380,10 +384,10 @@ pub mod parser {
                 json_final.push(',');
             }
 
-            writeln!(writer, "{}", json_final).is_err();
+            assert!(writeln!(writer, "{}", json_final).is_ok());
         }
 
-        writeln!(writer, "]\n}}").is_err();
+        assert!(writeln!(writer, "]\n}}").is_ok());
 
         println!("Done.");
 
