@@ -16,22 +16,19 @@ fn main() {
 }
 
 fn process_input(matches: clap::ArgMatches) {
-    let input = matches.value_of("INPUT").unwrap(); //Input is required so we can unwrap
+    let input = matches.value_of("input").unwrap(); //Input is required so we can unwrap
     let mut output = "";
     let mut verify = matches.is_present("verify");
 
     let in_path = Path::new(&input);
 
-    if matches.is_present("OUTPUT") {
-        output = matches.value_of("OUTPUT").unwrap();
+    if matches.is_present("output") {
+        output = matches.value_of("output").unwrap();
         let out_path = Path::new(output);
 
         match out_path.parent() {
             Some(parent) => {
-                if !parent.exists() {
-                    println!("Output directory doesn't exist.");
-                    return;
-                } else {
+                if parent.exists() {
                     match out_path.extension() {
                         Some(_) => {}
                         None => {

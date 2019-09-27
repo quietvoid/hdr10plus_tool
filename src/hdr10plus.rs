@@ -173,22 +173,49 @@ pub mod parser {
             reader.read_u8(8).unwrap(); //country_code
             reader.read_u16(16).unwrap(); //terminal_provider_code
             reader.read_u16(16).unwrap(); //terminal_provider_oriented_code
-            reader.read_u8(8).unwrap(); //application_identifier
-            reader.read_u8(8).unwrap(); //application_version
+            let application_identifier = reader.read_u8(8).unwrap(); //application_identifier
+            let application_version = reader.read_u8(8).unwrap(); //application_version
+
+            // SMPTE ST-2094 Application 4, Version 1
+            assert_eq!(application_identifier, 4);
+            assert_eq!(application_version, 1);
+
             let num_windows = reader.read_u8(2).unwrap();
+
+            // Versions up to 1.2 should be 1
+            for _w in 1..num_windows {
+                println!("num_windows > 1");
+                panic!("The value of num_windows shall be 1 in this version");
+            }
 
             let targeted_system_display_maximum_luminance = reader.read_u32(27).unwrap();
             let targeted_system_display_actual_peak_luminance_flag = reader.read_u8(1).unwrap();
 
-            /*
-                For LLC, when 0, skip 1 byte
-            */
+            // The value of targeted_system_display_maximum_luminance shall be in the range of 0 to 10000, inclusive
+            assert!(targeted_system_display_maximum_luminance <= 10000);
+
+            // For LLC, when 0, skip 1 byte
             if targeted_system_display_maximum_luminance == 0 {
                 reader.read_u8(8).unwrap();
             }
 
+            let mut targeted_system_display_actual_peak_luminance: Vec<Vec<u8>> = Vec::new();
+
+            // Versions up to 1.2 should be 0
             if targeted_system_display_actual_peak_luminance_flag == 1 {
-                println!("Targeted peak flag enabled");
+                let num_rows_targeted_system_display_actual_peak_luminance = reader.read_u8(5).unwrap();
+                let num_cols_targeted_system_display_actual_peak_luminance = reader.read_u8(5).unwrap();
+
+                for i in 0..num_rows_targeted_system_display_actual_peak_luminance {
+                    targeted_system_display_actual_peak_luminance.push(Vec::new());
+
+                    for _j in 0..num_cols_targeted_system_display_actual_peak_luminance {
+                        targeted_system_display_actual_peak_luminance[i as usize].push(reader.read_u8(4).unwrap());
+                    }
+                }
+
+                println!("Targeted system display actual peak luminance flag enabled");
+                panic!("The value of targeted_system_display_actual_peak_luminances shall be 0 in this version");
             }
 
             let mut average_maxrgb: u16 = 0;
@@ -223,27 +250,47 @@ pub mod parser {
                 average_maxrgb = reader.read_u16(16).unwrap();
 
                 /*
-                    For LLC, AverageRGB < 16 and MaxScl is all 0, use next byte.
+                    For LLC, AverageRGB < 16, MaxScl is all 0,
+                    Targeted display luminance is 0, use next byte.
                 */
-                if average_maxrgb < 16 && maxscl == vec![0, 0, 0] {
+                if average_maxrgb < 16 && maxscl == vec![0, 0, 0] && targeted_system_display_maximum_luminance == 0 {
                     average_maxrgb = reader.read_u16(8).unwrap();
                 }
 
                 num_distribution_maxrgb_percentiles = reader.read_u8(4).unwrap();
+
+                // The value of num_distribution_maxrgb_percentiles shall be 9\
+                assert_eq!(num_distribution_maxrgb_percentiles, 9);
 
                 for _i in 0..num_distribution_maxrgb_percentiles {
                     distribution_index.push(reader.read_u8(7).unwrap());
                     distribution_values.push(reader.read_u32(17).unwrap());
                 }
 
+                // Distribution indexes should be equal to  [1, 5, 10, 25, 50, 75, 90, 95, 99]
+                assert_eq!(distribution_index, correct_indexes);
+
                 reader.read_u16(10).unwrap(); //fraction_bright_pixels, unused for now
             }
 
             let mastering_display_actual_peak_luminance_flag = reader.read_u8(1).unwrap();
+            let mut mastering_display_actual_peak_luminance: Vec<Vec<u8>> = Vec::new();
 
-            //0 for now
+            // Versions up to 1.2 should be 0
             if mastering_display_actual_peak_luminance_flag == 1 {
-                println!("Mastering peak flag enabled");
+                let num_rows_mastering_display_actual_peak_luminance = reader.read_u8(5).unwrap();
+                let num_cols_mastering_display_actuak_peak_luminance = reader.read_u8(5).unwrap();
+
+                for i in 0..num_rows_mastering_display_actual_peak_luminance {
+                    mastering_display_actual_peak_luminance.push(Vec::new());
+
+                    for _j in 0..num_cols_mastering_display_actuak_peak_luminance {
+                        mastering_display_actual_peak_luminance[i as usize].push(reader.read_u8(4).unwrap());
+                    }
+                }
+
+                println!("Mastering display actual peak luminance flag enabled");
+                panic!("The value of mastering_display_actual_peak_luminance_flag shall be 0 for this version");
             }
 
             let mut knee_point_x: u16 = 0;
@@ -257,6 +304,11 @@ pub mod parser {
                 if tone_mapping_flag == 1 {
                     knee_point_x = reader.read_u16(12).unwrap();
                     knee_point_y = reader.read_u16(12).unwrap();
+
+                    // The value of knee_point_x shall be in the range of 0 to 1, and in multiples of 1/4095
+                    assert!(knee_point_x <= 4095);
+                    assert!(knee_point_y <= 4095);
+
                     let num_bezier_curve_anchors = reader.read_u8(4).unwrap();
 
                     for _i in 0..num_bezier_curve_anchors {
@@ -267,9 +319,10 @@ pub mod parser {
 
             let color_saturation_mapping_flag = reader.read_u8(1).unwrap();
 
-            //0 for now
+            // Versions up to 1.2 should be 0
             if color_saturation_mapping_flag == 1 {
                 println!("Color saturation mapping flag enabled");
+                panic!("The value of color_saturation_mapping_flag shall be 0 for this version");
             }
 
             /* Debug
@@ -290,9 +343,6 @@ pub mod parser {
                 knee_y: knee_point_y,
                 bezier_curve_data: bezier_curve_anchors,
             };
-
-            // Make sure indexes are correct
-            assert_eq!(meta.distribution_index, correct_indexes);
 
             complete_metadata.push(meta);
         }

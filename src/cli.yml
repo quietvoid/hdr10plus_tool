@@ -3,24 +3,24 @@ version: "0.2.3"
 author: quietvoid
 about: Parses HEVC dynamic metadata
 args:
-    - INPUT:
+    - input:
         help: Sets the input file to use
         required: true
         index: 1
-    - INPUT:
+    - input:
         help: Sets the input file to use
         short: i
         long: input
         takes_value: true
         required: true
-    - OUTPUT:
+    - output:
         help: Sets the output JSON file to use
         index: 2
-    - OUTPUT:
+    - output:
         help: Sets the output JSON file to use
         short: o
         long: output
         takes_value: true
     - verify:
         long: verify
-        help: Only checks if dynamic metadata is found.
+        help: Checks if input file contains dynamic metadata
