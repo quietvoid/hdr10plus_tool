@@ -203,14 +203,17 @@ pub mod parser {
 
             // Versions up to 1.2 should be 0
             if targeted_system_display_actual_peak_luminance_flag == 1 {
-                let num_rows_targeted_system_display_actual_peak_luminance = reader.read_u8(5).unwrap();
-                let num_cols_targeted_system_display_actual_peak_luminance = reader.read_u8(5).unwrap();
+                let num_rows_targeted_system_display_actual_peak_luminance =
+                    reader.read_u8(5).unwrap();
+                let num_cols_targeted_system_display_actual_peak_luminance =
+                    reader.read_u8(5).unwrap();
 
                 for i in 0..num_rows_targeted_system_display_actual_peak_luminance {
                     targeted_system_display_actual_peak_luminance.push(Vec::new());
 
                     for _j in 0..num_cols_targeted_system_display_actual_peak_luminance {
-                        targeted_system_display_actual_peak_luminance[i as usize].push(reader.read_u8(4).unwrap());
+                        targeted_system_display_actual_peak_luminance[i as usize]
+                            .push(reader.read_u8(4).unwrap());
                     }
                 }
 
@@ -253,13 +256,16 @@ pub mod parser {
                     For LLC, AverageRGB < 16, MaxScl is all 0,
                     Targeted display luminance is 0, use next byte.
                 */
-                if average_maxrgb < 16 && maxscl == vec![0, 0, 0] && targeted_system_display_maximum_luminance == 0 {
+                if average_maxrgb < 16
+                    && maxscl == vec![0, 0, 0]
+                    && targeted_system_display_maximum_luminance == 0
+                {
                     average_maxrgb = reader.read_u16(8).unwrap();
                 }
 
                 num_distribution_maxrgb_percentiles = reader.read_u8(4).unwrap();
 
-                // The value of num_distribution_maxrgb_percentiles shall be 9\
+                // The value of num_distribution_maxrgb_percentiles shall be 9
                 assert_eq!(num_distribution_maxrgb_percentiles, 9);
 
                 for _i in 0..num_distribution_maxrgb_percentiles {
@@ -285,7 +291,8 @@ pub mod parser {
                     mastering_display_actual_peak_luminance.push(Vec::new());
 
                     for _j in 0..num_cols_mastering_display_actuak_peak_luminance {
-                        mastering_display_actual_peak_luminance[i as usize].push(reader.read_u8(4).unwrap());
+                        mastering_display_actual_peak_luminance[i as usize]
+                            .push(reader.read_u8(4).unwrap());
                     }
                 }
 
