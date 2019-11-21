@@ -3,14 +3,15 @@ mod hdr10plus;
 //Regression tests
 #[cfg(test)]
 mod tests {
-
-    use crate::hdr10plus::parser::*;
+    use crate::hdr10plus::{llc_read_metadata, parse_metadata, Metadata};
+    use std::path::PathBuf;
 
     // x265 Tool_Verification_new_hdr10plus_llc.json 1st frame
     #[test]
     fn sample1() {
+        let sample1_file = PathBuf::from("./assets/ToS-s1.h265");
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata("./assets/ToS-s1.h265", false) {
+        match parse_metadata(false, &sample1_file, false) {
             Ok(vec) => test = llc_read_metadata(vec),
             Err(e) => println!("{}", e),
         }
@@ -38,8 +39,9 @@ mod tests {
     // All 0 values except arrays
     #[test]
     fn sample2() {
+        let sample2_file = PathBuf::from("./assets/ToS-s2.h265");
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata("./assets/ToS-s2.h265", false) {
+        match parse_metadata(false, &sample2_file, false) {
             Ok(vec) => test = llc_read_metadata(vec),
             Err(e) => println!("{}", e),
         }
@@ -67,8 +69,9 @@ mod tests {
     // Some small values
     #[test]
     fn sample3() {
+        let sample3_file = PathBuf::from("./assets/ToS-s3.h265");
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata("./assets/ToS-s3.h265", false) {
+        match parse_metadata(false, &sample3_file, false) {
             Ok(vec) => test = llc_read_metadata(vec),
             Err(e) => println!("{}", e),
         }
@@ -96,8 +99,9 @@ mod tests {
     // More random values
     #[test]
     fn sample4() {
+        let sample4_file = PathBuf::from("./assets/ToS-s4.h265");
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata("./assets/ToS-s4.h265", false) {
+        match parse_metadata(false, &sample4_file, false) {
             Ok(vec) => test = llc_read_metadata(vec),
             Err(e) => println!("{}", e),
         }
@@ -125,8 +129,9 @@ mod tests {
     // Some 0 values except targeted display maximum luminance
     #[test]
     fn sample5() {
+        let sample5_file = PathBuf::from("./assets/ToS-s5.h265");
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata("./assets/ToS-s5.h265", false) {
+        match parse_metadata(false, &sample5_file, false) {
             Ok(vec) => test = llc_read_metadata(vec),
             Err(e) => println!("{}", e),
         }
@@ -154,8 +159,9 @@ mod tests {
     // More random values
     #[test]
     fn sample6() {
+        let sample6_file = PathBuf::from("./assets/ToS-s6.h265");
         let mut test: Vec<Metadata> = Vec::new();
-        match parse_metadata("./assets/ToS-s6.h265", false) {
+        match parse_metadata(false, &sample6_file, false) {
             Ok(vec) => test = llc_read_metadata(vec),
             Err(e) => println!("{}", e),
         }

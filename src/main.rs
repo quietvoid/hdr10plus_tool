@@ -1,78 +1,94 @@
-use crate::hdr10plus::parser::*;
 use regex::Regex;
-use std::path::Path;
-
-#[macro_use]
-extern crate clap;
-use clap::App;
+use std::path::PathBuf;
+use structopt::StructOpt;
 
 mod hdr10plus;
+use crate::hdr10plus::process_file;
 
-fn main() {
-    let yaml = load_yaml!("cli.yml");
-    let matches = App::from_yaml(yaml).get_matches();
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "hdr10plus_parser",
+    about = "Parses HDR10+ dynamic metadata in HEVC video files"
+)]
+struct Opt {
+    #[structopt(
+        name = "input",
+        short = "i",
+        long,
+        help = "Sets the input file to use",
+        long,
+        conflicts_with = "stdin",
+        parse(from_os_str)
+    )]
+    input: Option<PathBuf>,
 
-    process_input(matches);
+    #[structopt(
+        help = "Uses stdin as input data",
+        conflicts_with = "input",
+        parse(from_os_str)
+    )]
+    stdin: Option<PathBuf>,
+
+    #[structopt(
+        short = "o",
+        long,
+        help = "Sets the output JSON file to use",
+        parse(from_os_str)
+    )]
+    output: Option<PathBuf>,
+
+    #[structopt(long, help = "Checks if input file contains dynamic metadata")]
+    verify: bool,
 }
 
-fn process_input(matches: clap::ArgMatches) {
-    let input = matches.value_of("input").unwrap(); //Input is required so we can unwrap
-    let mut output = "";
-    let mut verify = matches.is_present("verify");
+fn main() -> std::io::Result<()> {
+    let opt = Opt::from_args();
 
-    let in_path = Path::new(&input);
+    let input = match opt.input {
+        Some(input) => input,
+        None => match opt.stdin {
+            Some(stdin) => stdin,
+            None => PathBuf::new(),
+        },
+    };
 
-    if matches.is_present("output") {
-        output = matches.value_of("output").unwrap();
-        let out_path = Path::new(output);
+    let mut verify = opt.verify;
 
-        match out_path.parent() {
-            Some(parent) => {
-                if parent.exists() {
-                    match out_path.extension() {
-                        Some(_) => {}
-                        None => {
-                            println!("Output has to be a file.");
-                            return;
-                        }
-                    }
-                }
-            }
-            None => {
-                println!("Invalid output path.");
-                return;
-            }
+    let output = match opt.output {
+        Some(out) => out,
+        None => {
+            verify = true;
+            PathBuf::new()
         }
-    } else {
-        verify = true;
+    };
+
+    match verify_input(&input) {
+        Ok(is_stdin) => process_file(is_stdin, &input, output, verify),
+        Err(msg) => {
+            println!("{}", msg);
+        }
     }
+    Ok(())
+}
 
+fn verify_input(input: &PathBuf) -> Result<bool, String> {
     let regex = Regex::new(r"\.(hevc|.?265)").unwrap();
+    let file_name = match input.file_name() {
+        Some(file_name) => file_name.to_str().unwrap(),
+        None => "",
+    };
 
-    if input == "-" || (regex.is_match(&input) && in_path.is_file()) {
-        let final_metadata: Vec<Metadata>;
-
-        match parse_metadata(input, verify) {
-            Ok(vec) => {
-                //Match returned vec to check for --verify
-                if vec[0][0] == 1 && vec[0].len() == 1 {
-                    println!("Dynamic HDR10+ metadata detected.");
-                    return;
-                } else {
-                    final_metadata = llc_read_metadata(vec);
-                    //Sucessful parse & no --verify
-                    if !final_metadata.is_empty() {
-                        write_json(output, final_metadata)
-                    } else {
-                        println!("Failed reading parsed metadata.");
-                    }
-                }
-            }
-            Err(e) => println!("{}", e),
-        }
-    } else if !in_path.is_file() {
-        println!("File path not found.");
+    if file_name == "-" {
+        // is stdin
+        Ok(true)
+    } else if regex.is_match(file_name) && input.is_file() {
+        // is file
+        Ok(false)
+    } else if file_name == "" {
+        Err(String::from("Missing input"))
+    } else if !input.is_file() {
+        Err(String::from("Input file doesn't exist."))
     } else {
-        println!("Invalid file type.");
+        Err(String::from("Invalid input file type."))
     }
 }
