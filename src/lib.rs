@@ -185,4 +185,34 @@ mod tests {
             vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
         );
     }
+
+    // Edge case with averageRGB
+    #[test]
+    fn sample7() {
+        let sample7_file = PathBuf::from("./assets/ToS-s7.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample7_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 400);
+        assert_eq!(test[0].average_maxrgb, 12);
+        assert_eq!(test[0].maxscl, vec![3790, 5508, 3584]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(
+            test[0].bezier_curve_data,
+            vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
+        );
+    }
 }

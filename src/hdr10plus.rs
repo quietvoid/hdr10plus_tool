@@ -289,6 +289,9 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                 && targeted_system_display_maximum_luminance == 0
             {
                 average_maxrgb = reader.read_u16(8).unwrap();
+            // Unknown edge case, skip a byte..
+            } else if average_maxrgb == 12 && targeted_system_display_maximum_luminance != 0 && !maxscl.contains(&0){
+                reader.read_u8(8);
             }
 
             let num_distribution_maxrgb_percentiles = reader.read_u8(4).unwrap();
