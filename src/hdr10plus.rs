@@ -274,7 +274,12 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                         let temp: u32 = maxscl_high - 65536;
 
                         if temp == 0 {
-                            reader.read_u32(8).unwrap();
+                            let mut maxscl_rel_reader = reader.relative_reader();
+                            let maxscl_mul = maxscl_rel_reader.read_u32(8).unwrap();
+                            
+                            if maxscl_mul < 4 {
+                                reader.read_u32(8).unwrap();
+                            }
                         }
 
                         maxscl.push(temp);
@@ -282,7 +287,7 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                         maxscl.push(reader.read_u32(8).unwrap());
                     }
                 } else if original_maxscl[i - 1] == 0
-                    || (targeted_system_display_maximum_luminance == 0 && maxscl[i - 1] == 0)
+                    || (targeted_system_display_maximum_luminance == 0 && maxscl[i - 1] == 0 && maxscl_high < 8)
                 {
                     maxscl.push(reader.read_u32(8).unwrap());
                 } else {
@@ -292,26 +297,14 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                 original_maxscl.push(maxscl_high);
             }
 
-            if targeted_system_display_maximum_luminance != 0 && maxscl == vec![0, 0, 0] {
-                reader.read_u32(8).unwrap();
-            }
-
             // Shall be under 100000.
             maxscl.iter().for_each(|&v| assert!(v <= 100_000));
 
             // Read average max RGB
             average_maxrgb = reader.read_u32(17).unwrap();
-
-            if targeted_system_display_maximum_luminance == 0
-                && maxscl.iter().filter(|&e| *e == 0).count() >= 2
-            {
+            if maxscl[2] == 0 {
                 average_maxrgb = reader.read_u32(8).unwrap();
-            } else if average_maxrgb == 12
-                && targeted_system_display_maximum_luminance != 0
-                && !maxscl.contains(&0)
-            {
-                reader.read_u8(8).unwrap();
-            } else if targeted_system_display_maximum_luminance < 16 && maxscl.contains(&0) {
+            } else if average_maxrgb == 12 && maxscl[2] % 512 == 0 {
                 average_maxrgb = reader.read_u32(8).unwrap();
             }
 
