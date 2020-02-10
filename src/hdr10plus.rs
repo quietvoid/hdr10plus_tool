@@ -188,6 +188,7 @@ fn process_bytes(
 
 pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
     let correct_indexes = [1, 5, 10, 25, 50, 75, 90, 95, 99];
+    let expected_num_percentiles = 9;
 
     print!("Reading parsed dynamic metadata... ");
     stdout().flush().ok();
@@ -196,9 +197,11 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
 
     //Loop over lines and read metadata, HDR10+ LLC format
     for data in input.iter() {
+
         let bytes = &data[..];
 
         let mut reader = BitReader::new(bytes);
+        let mut temp_reader = reader.relative_reader();
 
         reader.read_u8(8).unwrap(); //country_code
         reader.read_u16(16).unwrap(); //terminal_provider_code
@@ -225,8 +228,13 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
         assert!(targeted_system_display_maximum_luminance <= 10000);
 
         // For LLC, when 0, skip 1 byte
-        if targeted_system_display_maximum_luminance == 0 {
-            reader.read_u8(8).unwrap();
+        if targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance == 8192 {
+            temp_reader = reader.relative_reader();
+            if temp_reader.read_u8(8).unwrap() != 0 && targeted_system_display_maximum_luminance == 8192 {
+                
+            } else {
+                reader.read_u32(8).unwrap();
+            }
         }
 
         let mut targeted_system_display_actual_peak_luminance: Vec<Vec<u8>> = Vec::new();
@@ -260,38 +268,116 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             for i in 0..3 {
                 let mut maxscl_high = reader.read_u32(17).unwrap();
 
+                println!("{}", maxscl_high);
+
                 if i == 0 {
+                    temp_reader = reader.relative_reader();
+                    let skipped_byte = temp_reader.read_u32(8).unwrap();
+                    let first_temp = temp_reader.read_u32(17).unwrap();
+
                     if maxscl_high == 0 {
-                        reader.read_u32(8).unwrap();
-                    } else if maxscl_high == 1 && targeted_system_display_maximum_luminance == 0 {
-                        reader.read_u32(1).unwrap();
-                        maxscl_high = reader.read_u32(7).unwrap();
-                    }
-
-                    maxscl.push(maxscl_high);
-                } else if i == 1 && maxscl.contains(&0) {
-                    if maxscl_high >= 65536 {
-                        let temp: u32 = maxscl_high - 65536;
-
-                        if temp == 0 {
-                            let mut maxscl_rel_reader = reader.relative_reader();
-                            let maxscl_mul = maxscl_rel_reader.read_u32(8).unwrap();
-                            
-                            if maxscl_mul < 4 {
+                        if skipped_byte == 1 && first_temp >= 65536 && first_temp <= 100_000 {
+                            if targeted_system_display_maximum_luminance != 8192 {
                                 reader.read_u32(8).unwrap();
                             }
                         }
+                    } else if maxscl_high == 1 && (targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance % 32 == 0) {
+                        reader.read_u32(1).unwrap();
+                        maxscl_high = reader.read_u32(7).unwrap();
+                    } else if maxscl_high == 32768 || maxscl_high == 65536 || maxscl_high == 98304 {
+                        if targeted_system_display_maximum_luminance == 8192 {
+                            maxscl_high = maxscl_high - 98304;
 
-                        maxscl.push(temp);
-                    } else {
-                        maxscl.push(reader.read_u32(8).unwrap());
+                            if skipped_byte == 1 {
+                                reader.read_u32(8).unwrap();
+                            }
+                        } else {
+                            reader.read_u32(8).unwrap();
+                        }
+                    } else if maxscl_high >= 98304 && targeted_system_display_maximum_luminance == 8192 {
+                        maxscl_high = maxscl_high - 98304;
                     }
-                } else if original_maxscl[i - 1] == 0
-                    || (targeted_system_display_maximum_luminance == 0 && maxscl[i - 1] == 0 && maxscl_high < 8)
-                {
-                    maxscl.push(reader.read_u32(8).unwrap());
-                } else {
+
                     maxscl.push(maxscl_high);
+                } else if i == 1 {
+                    temp_reader = reader.relative_reader();
+                    let second_temp = temp_reader.read_u32(8).unwrap();
+
+                    if maxscl[i - 1] == 0 || maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304 {
+                        if maxscl_high >= 65536 {
+                            let temp: u32 = maxscl_high - 65536;
+    
+                            if temp == 0 {
+                                if second_temp < 4 {
+                                    reader.read_u32(8).unwrap();
+                                }
+                            }
+
+                            if temp != 0 && targeted_system_display_maximum_luminance == 8192 {
+                                maxscl.push(maxscl_high);
+                            } else {
+                                maxscl.push(temp);
+                            }
+                        } else {
+                            if maxscl_high == 3 && (targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance % 32 == 0) {
+                                maxscl.push(reader.read_u32(8).unwrap());
+                            } else {
+                                maxscl.push(maxscl_high);
+                            }
+                        }
+                    } else {
+                        if maxscl_high == 0 {
+                            if second_temp < 4 {
+                                reader.read_u32(8).unwrap();
+                            }
+                            
+                            maxscl.push(maxscl_high);
+                        } else {
+                            if maxscl_high == 3 && (reader.remaining() == 344 || reader.remaining() == 336 || reader.remaining() == 328) {
+                                if maxscl[i - 1] < 2048 {
+                                    if maxscl[i - 1] >= 128 && maxscl[i -1] < 2048 && maxscl[i - 1] % 128 == 0 {
+                                        maxscl_high = reader.read_u32(8).unwrap();
+                                    }
+
+                                    maxscl.push(maxscl_high);
+                                } else {
+                                    maxscl.push(reader.read_u32(8).unwrap());
+                                }
+                            } else {
+                                maxscl.push(maxscl_high);
+                            }
+                        }
+                    }
+                } else if maxscl[i - 1] == 0 {
+                    if maxscl_high == 6 && reader.remaining() != 303 {
+                        maxscl.push(reader.read_u32(8).unwrap());
+                    } else {
+                        maxscl.push(maxscl_high);
+                    }
+                } else {
+                    temp_reader = reader.relative_reader();
+                    let third_temp = temp_reader.read_u32(8).unwrap();
+                    
+                    if maxscl_high == 6 && (reader.remaining() == 319 || reader.remaining() == 311) {
+                        println!("bad {}", third_temp);
+                        if maxscl[i - 1] <= 2048 && third_temp != 6 {
+                            maxscl.push(reader.read_u32(8).unwrap());
+                        } else {
+                            if maxscl[i - 1] > 2048 && maxscl[i - 1] % 256 == 0 {
+                                maxscl_high = reader.read_u32(8).unwrap();
+                            } else {
+                                reader.read_u32(8).unwrap();
+                            }
+
+                            maxscl.push(maxscl_high);
+                        }
+                    } else {
+                        if (maxscl_high == 0 && maxscl[i - 1] > 2048) || (maxscl_high == 0 && third_temp == 6 && reader.remaining() == 311) {
+                            reader.read_u32(8).unwrap();
+                        }
+
+                        maxscl.push(maxscl_high);
+                    }
                 }
 
                 original_maxscl.push(maxscl_high);
@@ -300,13 +386,45 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             // Shall be under 100000.
             maxscl.iter().for_each(|&v| assert!(v <= 100_000));
 
+            if maxscl[2] == 0 {
+                temp_reader = reader.relative_reader();
+
+                // Skip a byte
+                temp_reader.read_u32(8).unwrap();
+
+                // Average max rgb
+                let temp_avg_maxrgb = temp_reader.read_u32(17).unwrap();
+
+                let mut future_reader = temp_reader.relative_reader();
+                
+                // Skip another byte
+                let skipped_byte = future_reader.read_u32(8).unwrap();
+
+                if future_reader.read_u8(4).unwrap() == expected_num_percentiles || temp_reader.read_u8(4).unwrap() == expected_num_percentiles {
+                    if skipped_byte == 144 && (temp_avg_maxrgb >= 3072 && temp_avg_maxrgb <= 3087) {
+                    } else {
+                        reader.read_u32(8).unwrap();
+                    }
+                }
+            }
+
             // Read average max RGB
             average_maxrgb = reader.read_u32(17).unwrap();
-            if maxscl[2] == 0 {
-                average_maxrgb = reader.read_u32(8).unwrap();
-            } else if average_maxrgb == 12 && maxscl[2] % 512 == 0 {
+
+            println!("{:?} {}", maxscl, targeted_system_display_maximum_luminance);
+            println!("1st {}", average_maxrgb);
+
+            temp_reader = reader.relative_reader();
+
+            // Try to skip a byte
+            temp_reader.read_u32(8).unwrap();
+
+            // If the percentiles are correct, go ahead and use next value
+            if temp_reader.read_u8(4).unwrap() == expected_num_percentiles {
                 average_maxrgb = reader.read_u32(8).unwrap();
             }
+
+            println!("2nd {}", average_maxrgb);
 
             // Shall be under 100000
             assert!(average_maxrgb <= 100_000);
@@ -417,25 +535,39 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
     let frame_json_list: Vec<Value> = metadata
         .iter()
         .map(|m| {
-            let frame_json = json!({
-                "BezierCurveData": {
-                    "Anchors": m.bezier_curve_data,
-                    "KneePointX": m.knee_x,
-                    "KneePointY": m.knee_y
-                },
-                "LuminanceParameters": {
-                    "AverageRGB": m.average_maxrgb,
-                    "LuminanceDistributions": {
-                        "DistributionIndex": m.distribution_index,
-                        "DistributionValues": m.distribution_values,
+            if m.targeted_system_display_maximum_luminance == 0 && m.bezier_curve_data.is_empty() {
+                json!({
+                    "LuminanceParameters": {
+                        "AverageRGB": m.average_maxrgb,
+                        "LuminanceDistributions": {
+                            "DistributionIndex": m.distribution_index,
+                            "DistributionValues": m.distribution_values,
+                        },
+                        "MaxScl": m.maxscl
                     },
-                    "MaxScl": m.maxscl
-                },
-                "NumberOfWindows": m.num_windows,
-                "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
-            });
+                    "NumberOfWindows": m.num_windows,
+                    "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
+                })
+            } else {
+                json!({
+                    "BezierCurveData": {
+                        "Anchors": m.bezier_curve_data,
+                        "KneePointX": m.knee_x,
+                        "KneePointY": m.knee_y
+                    },
+                    "LuminanceParameters": {
+                        "AverageRGB": m.average_maxrgb,
+                        "LuminanceDistributions": {
+                            "DistributionIndex": m.distribution_index,
+                            "DistributionValues": m.distribution_values,
+                        },
+                        "MaxScl": m.maxscl
+                    },
+                    "NumberOfWindows": m.num_windows,
+                    "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
+                })
+            }
 
-            frame_json
         })
         .collect::<Vec<Value>>();
 
