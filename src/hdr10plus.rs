@@ -285,13 +285,13 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                         reader.read_u32(1).unwrap();
                         maxscl_high = reader.read_u32(7).unwrap();
                     } else if maxscl_high == 32768 || maxscl_high == 65536 || maxscl_high == 98304 {
-                        if targeted_system_display_maximum_luminance == 8192 {
+                        if maxscl_high >= 98304 && targeted_system_display_maximum_luminance == 8192 {
                             maxscl_high = maxscl_high - 98304;
 
                             if skipped_byte == 1 {
                                 reader.read_u32(8).unwrap();
                             }
-                        } else {
+                        } else if maxscl_high != 32768 && maxscl_high != 65536 && maxscl_high != 98304 {
                             reader.read_u32(8).unwrap();
                         }
                     } else if maxscl_high >= 98304 && targeted_system_display_maximum_luminance == 8192 {
@@ -306,20 +306,25 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                     if maxscl[i - 1] == 0 || maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304 {
                         if maxscl_high >= 65536 {
                             let temp: u32 = maxscl_high - 65536;
+                            let mut temp2: i32 = -1;
     
                             if temp == 0 {
                                 if second_temp < 4 {
-                                    reader.read_u32(8).unwrap();
+                                    temp2 = reader.read_u32(8).unwrap() as i32;
                                 }
                             }
 
-                            if temp != 0 && targeted_system_display_maximum_luminance == 8192 {
+                            if temp != 0 && (targeted_system_display_maximum_luminance == 8192 || maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304) {
+                                maxscl.push(maxscl_high);
+                            } else if targeted_system_display_maximum_luminance != 8192 && (reader.remaining() == 328 || reader.remaining() == 320) {
                                 maxscl.push(maxscl_high);
                             } else {
                                 maxscl.push(temp);
                             }
                         } else {
                             if maxscl_high == 3 && (targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance % 32 == 0) {
+                                maxscl.push(reader.read_u32(8).unwrap());
+                            } else if maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304 {
                                 maxscl.push(reader.read_u32(8).unwrap());
                             } else {
                                 maxscl.push(maxscl_high);
@@ -351,6 +356,8 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                 } else if maxscl[i - 1] == 0 {
                     if maxscl_high == 6 && reader.remaining() != 303 {
                         maxscl.push(reader.read_u32(8).unwrap());
+                    } else if maxscl[0] == 32768 || maxscl[0] == 65536 || maxscl[0] == 98304 {
+                        maxscl.push(reader.read_u32(8).unwrap());
                     } else {
                         maxscl.push(maxscl_high);
                     }
@@ -359,7 +366,6 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                     let third_temp = temp_reader.read_u32(8).unwrap();
                     
                     if maxscl_high == 6 && (reader.remaining() == 319 || reader.remaining() == 311) {
-                        println!("bad {}", third_temp);
                         if maxscl[i - 1] <= 2048 && third_temp != 6 {
                             maxscl.push(reader.read_u32(8).unwrap());
                         } else {
@@ -372,7 +378,7 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                             maxscl.push(maxscl_high);
                         }
                     } else {
-                        if (maxscl_high == 0 && maxscl[i - 1] > 2048) || (maxscl_high == 0 && third_temp == 6 && reader.remaining() == 311) {
+                        if (maxscl_high == 0 && maxscl[i - 1] > 2048 && maxscl[i - 1] <= 4096) || (maxscl_high == 0 && third_temp == 6 && reader.remaining() == 311) {
                             reader.read_u32(8).unwrap();
                         }
 
