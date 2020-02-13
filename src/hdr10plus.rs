@@ -197,7 +197,6 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
 
     //Loop over lines and read metadata, HDR10+ LLC format
     for data in input.iter() {
-
         let bytes = &data[..];
 
         let mut reader = BitReader::new(bytes);
@@ -228,10 +227,13 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
         assert!(targeted_system_display_maximum_luminance <= 10000);
 
         // For LLC, when 0, skip 1 byte
-        if targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance == 8192 {
+        if targeted_system_display_maximum_luminance == 0
+            || targeted_system_display_maximum_luminance == 8192
+        {
             temp_reader = reader.relative_reader();
-            if temp_reader.read_u8(8).unwrap() != 0 && targeted_system_display_maximum_luminance == 8192 {
-                
+            if temp_reader.read_u8(8).unwrap() != 0
+                && targeted_system_display_maximum_luminance == 8192
+            {
             } else {
                 reader.read_u32(8).unwrap();
             }
@@ -268,8 +270,6 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             for i in 0..3 {
                 let mut maxscl_high = reader.read_u32(17).unwrap();
 
-                println!("{}", maxscl_high);
-
                 if i == 0 {
                     temp_reader = reader.relative_reader();
                     let skipped_byte = temp_reader.read_u32(8).unwrap();
@@ -281,21 +281,38 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                                 reader.read_u32(8).unwrap();
                             }
                         }
-                    } else if maxscl_high == 1 && (targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance % 32 == 0) {
+                    } else if maxscl_high == 1
+                        && (targeted_system_display_maximum_luminance == 0
+                            || targeted_system_display_maximum_luminance % 32 == 0)
+                    {
                         reader.read_u32(1).unwrap();
                         maxscl_high = reader.read_u32(7).unwrap();
                     } else if maxscl_high == 32768 || maxscl_high == 65536 || maxscl_high == 98304 {
-                        if maxscl_high >= 98304 && targeted_system_display_maximum_luminance == 8192 {
-                            maxscl_high = maxscl_high - 98304;
+                        if maxscl_high >= 98304 && targeted_system_display_maximum_luminance == 8192
+                        {
+                            if reader.remaining() == 353 && reader.position() == 103 {
+                            } else {
+                                maxscl_high -= 98304;
+                            }
 
                             if skipped_byte == 1 {
                                 reader.read_u32(8).unwrap();
                             }
-                        } else if maxscl_high != 32768 && maxscl_high != 65536 && maxscl_high != 98304 {
+                        } else if maxscl_high != 32768
+                            && maxscl_high != 65536
+                            && maxscl_high != 98304
+                        {
                             reader.read_u32(8).unwrap();
                         }
-                    } else if maxscl_high >= 98304 && targeted_system_display_maximum_luminance == 8192 {
-                        maxscl_high = maxscl_high - 98304;
+                    } else if maxscl_high >= 98304
+                        && targeted_system_display_maximum_luminance == 8192
+                    {
+                        if (reader.remaining() == 353 || reader.remaining() == 345)
+                            && reader.position() == 103
+                        {
+                        } else {
+                            maxscl_high -= 98304;
+                        }
                     }
 
                     maxscl.push(maxscl_high);
@@ -303,28 +320,60 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                     temp_reader = reader.relative_reader();
                     let second_temp = temp_reader.read_u32(8).unwrap();
 
-                    if maxscl[i - 1] == 0 || maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304 {
+                    if maxscl[i - 1] == 0
+                        || maxscl[i - 1] == 32768
+                        || maxscl[i - 1] == 65536
+                        || maxscl[i - 1] == 98304
+                    {
                         if maxscl_high >= 65536 {
                             let temp: u32 = maxscl_high - 65536;
-                            let mut temp2: i32 = -1;
-    
+
                             if temp == 0 {
                                 if second_temp < 4 {
-                                    temp2 = reader.read_u32(8).unwrap() as i32;
+                                    reader.read_u32(8).unwrap();
                                 }
                             }
 
-                            if temp != 0 && (targeted_system_display_maximum_luminance == 8192 || maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304) {
+                            if temp != 0
+                                && (targeted_system_display_maximum_luminance == 8192
+                                    || maxscl[i - 1] == 32768
+                                    || maxscl[i - 1] == 65536
+                                    || maxscl[i - 1] == 98304)
+                            {
                                 maxscl.push(maxscl_high);
-                            } else if targeted_system_display_maximum_luminance != 8192 && (reader.remaining() == 328 || reader.remaining() == 320) {
+                            } else if (targeted_system_display_maximum_luminance >= 4096
+                                && targeted_system_display_maximum_luminance < 8192)
+                                && (reader.remaining() == 328 || reader.remaining() == 320)
+                            {
+                                maxscl.push(maxscl_high);
+                            } else if temp == 0
+                                && targeted_system_display_maximum_luminance == 8192
+                                && reader.position() == 136
+                            {
+                                maxscl.push(maxscl_high);
+                            } else if reader.remaining() == 320 && reader.position() == 120 {
                                 maxscl.push(maxscl_high);
                             } else {
                                 maxscl.push(temp);
                             }
                         } else {
-                            if maxscl_high == 3 && (targeted_system_display_maximum_luminance == 0 || targeted_system_display_maximum_luminance % 32 == 0) {
+                            if maxscl_high == 3
+                                && (targeted_system_display_maximum_luminance == 0
+                                    || targeted_system_display_maximum_luminance % 32 == 0)
+                            {
                                 maxscl.push(reader.read_u32(8).unwrap());
-                            } else if maxscl[i - 1] == 32768 || maxscl[i - 1] == 65536 || maxscl[i - 1] == 98304 {
+                            } else if reader.position() != 128
+                                && targeted_system_display_maximum_luminance != 8192
+                                && (maxscl[i - 1] == 32768
+                                    || maxscl[i - 1] == 65536
+                                    || maxscl[i - 1] == 98304)
+                                && maxscl_high == 768
+                            {
+                                maxscl.push(reader.read_u32(8).unwrap());
+                            } else if reader.remaining() > 336
+                                || (reader.remaining() == 336
+                                    && targeted_system_display_maximum_luminance == 8192)
+                            {
                                 maxscl.push(reader.read_u32(8).unwrap());
                             } else {
                                 maxscl.push(maxscl_high);
@@ -335,12 +384,19 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                             if second_temp < 4 {
                                 reader.read_u32(8).unwrap();
                             }
-                            
+
                             maxscl.push(maxscl_high);
                         } else {
-                            if maxscl_high == 3 && (reader.remaining() == 344 || reader.remaining() == 336 || reader.remaining() == 328) {
+                            if maxscl_high == 3
+                                && (reader.remaining() == 344
+                                    || reader.remaining() == 336
+                                    || reader.remaining() == 328)
+                            {
                                 if maxscl[i - 1] < 2048 {
-                                    if maxscl[i - 1] >= 128 && maxscl[i -1] < 2048 && maxscl[i - 1] % 128 == 0 {
+                                    if maxscl[i - 1] >= 128
+                                        && maxscl[i - 1] < 2048
+                                        && maxscl[i - 1] % 128 == 0
+                                    {
                                         maxscl_high = reader.read_u32(8).unwrap();
                                     }
 
@@ -364,8 +420,9 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                 } else {
                     temp_reader = reader.relative_reader();
                     let third_temp = temp_reader.read_u32(8).unwrap();
-                    
-                    if maxscl_high == 6 && (reader.remaining() == 319 || reader.remaining() == 311) {
+
+                    if maxscl_high == 6 && (reader.remaining() == 319 || reader.remaining() == 311)
+                    {
                         if maxscl[i - 1] <= 2048 && third_temp != 6 {
                             maxscl.push(reader.read_u32(8).unwrap());
                         } else {
@@ -378,7 +435,9 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                             maxscl.push(maxscl_high);
                         }
                     } else {
-                        if (maxscl_high == 0 && maxscl[i - 1] > 2048 && maxscl[i - 1] <= 4096) || (maxscl_high == 0 && third_temp == 6 && reader.remaining() == 311) {
+                        if (maxscl_high == 0 && maxscl[i - 1] > 2048 && maxscl[i - 1] <= 4096)
+                            || (maxscl_high == 0 && third_temp == 6 && reader.remaining() == 311)
+                        {
                             reader.read_u32(8).unwrap();
                         }
 
@@ -402,11 +461,13 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                 let temp_avg_maxrgb = temp_reader.read_u32(17).unwrap();
 
                 let mut future_reader = temp_reader.relative_reader();
-                
+
                 // Skip another byte
                 let skipped_byte = future_reader.read_u32(8).unwrap();
 
-                if future_reader.read_u8(4).unwrap() == expected_num_percentiles || temp_reader.read_u8(4).unwrap() == expected_num_percentiles {
+                if future_reader.read_u8(4).unwrap() == expected_num_percentiles
+                    || temp_reader.read_u8(4).unwrap() == expected_num_percentiles
+                {
                     if skipped_byte == 144 && (temp_avg_maxrgb >= 3072 && temp_avg_maxrgb <= 3087) {
                     } else {
                         reader.read_u32(8).unwrap();
@@ -417,9 +478,6 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             // Read average max RGB
             average_maxrgb = reader.read_u32(17).unwrap();
 
-            println!("{:?} {}", maxscl, targeted_system_display_maximum_luminance);
-            println!("1st {}", average_maxrgb);
-
             temp_reader = reader.relative_reader();
 
             // Try to skip a byte
@@ -429,8 +487,6 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             if temp_reader.read_u8(4).unwrap() == expected_num_percentiles {
                 average_maxrgb = reader.read_u32(8).unwrap();
             }
-
-            println!("2nd {}", average_maxrgb);
 
             // Shall be under 100000
             assert!(average_maxrgb <= 100_000);

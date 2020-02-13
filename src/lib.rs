@@ -572,7 +572,7 @@ mod tests {
         assert_eq!(test[0].num_windows, 1);
         assert_eq!(test[0].targeted_system_display_maximum_luminance, 0);
         assert_eq!(test[0].average_maxrgb, 0);
-        assert_eq!(test[0].maxscl, vec![0,5582,0]);
+        assert_eq!(test[0].maxscl, vec![0, 5582, 0]);
         assert_eq!(
             test[0].distribution_index,
             vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -598,7 +598,7 @@ mod tests {
         assert_eq!(test[0].num_windows, 1);
         assert_eq!(test[0].targeted_system_display_maximum_luminance, 0);
         assert_eq!(test[0].average_maxrgb, 9);
-        assert_eq!(test[0].maxscl, vec![0,0,3584]);
+        assert_eq!(test[0].maxscl, vec![0, 0, 3584]);
         assert_eq!(
             test[0].distribution_index,
             vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -624,7 +624,7 @@ mod tests {
         assert_eq!(test[0].num_windows, 1);
         assert_eq!(test[0].targeted_system_display_maximum_luminance, 0);
         assert_eq!(test[0].average_maxrgb, 12);
-        assert_eq!(test[0].maxscl, vec![7,0,3584]);
+        assert_eq!(test[0].maxscl, vec![7, 0, 3584]);
         assert_eq!(
             test[0].distribution_index,
             vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -767,7 +767,7 @@ mod tests {
         assert_eq!(test[0].knee_y, 0);
         assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
     }
-    
+
     #[test]
     fn sample28() {
         let sample28_file = PathBuf::from("./assets/ToS-s28.h265");
@@ -1235,7 +1235,7 @@ mod tests {
         assert_eq!(test[0].knee_y, 0);
         assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
     }
-    
+
     #[test]
     fn sample46() {
         let sample46_file = PathBuf::from("./assets/ToS-s46.h265");
@@ -1275,6 +1275,188 @@ mod tests {
         assert_eq!(test[0].targeted_system_display_maximum_luminance, 8192);
         assert_eq!(test[0].average_maxrgb, 65536);
         assert_eq!(test[0].maxscl, vec![32768, 0, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample48() {
+        let sample48_file = PathBuf::from("./assets/ToS-s48.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample48_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 8192);
+        assert_eq!(test[0].average_maxrgb, 65536);
+        assert_eq!(test[0].maxscl, vec![0, 65536, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample49() {
+        let sample49_file = PathBuf::from("./assets/ToS-s49.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample49_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 8192);
+        assert_eq!(test[0].average_maxrgb, 12);
+        assert_eq!(test[0].maxscl, vec![99000, 98304, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample50() {
+        let sample50_file = PathBuf::from("./assets/ToS-s50.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample50_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 8192);
+        assert_eq!(test[0].average_maxrgb, 99999);
+        assert_eq!(test[0].maxscl, vec![99000, 98304, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample51() {
+        let sample51_file = PathBuf::from("./assets/ToS-s51.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample51_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 400);
+        assert_eq!(test[0].average_maxrgb, 32847);
+        assert_eq!(test[0].maxscl, vec![32768, 32768, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample52() {
+        let sample52_file = PathBuf::from("./assets/ToS-s52.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample52_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 400);
+        assert_eq!(test[0].average_maxrgb, 0);
+        assert_eq!(test[0].maxscl, vec![0, 0, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample53() {
+        let sample53_file = PathBuf::from("./assets/ToS-s53.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample53_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 400);
+        assert_eq!(test[0].average_maxrgb, 100000);
+        assert_eq!(test[0].maxscl, vec![0, 99999, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
+    }
+
+    #[test]
+    fn sample54() {
+        let sample54_file = PathBuf::from("./assets/ToS-s54.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample54_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 10000);
+        assert_eq!(test[0].average_maxrgb, 100000);
+        assert_eq!(test[0].maxscl, vec![0, 0, 0]);
         assert_eq!(
             test[0].distribution_index,
             vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
