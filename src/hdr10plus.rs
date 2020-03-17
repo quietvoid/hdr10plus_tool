@@ -187,7 +187,7 @@ fn process_bytes(
 }
 
 pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
-    let correct_indexes = [1, 5, 10, 25, 50, 75, 90, 95, 99];
+    let mut correct_indexes = vec![];
     let expected_num_percentiles = 9;
 
     print!("Reading parsed dynamic metadata... ");
@@ -353,6 +353,8 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                                 maxscl.push(maxscl_high);
                             } else if reader.remaining() == 320 && reader.position() == 120 {
                                 maxscl.push(maxscl_high);
+                            } else if reader.remaining() == 368 && reader.position() == 128 || reader.remaining() == 376 && reader.position() == 136 {
+                                maxscl.push(maxscl_high);
                             } else {
                                 maxscl.push(temp);
                             }
@@ -472,6 +474,8 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                     } else {
                         reader.read_u32(8).unwrap();
                     }
+                } else if (temp_reader.remaining() == 322 && temp_reader.position() == 29) || (temp_reader.remaining() == 330 && temp_reader.position() == 29) {
+                    reader.read_u32(8).unwrap();
                 }
             }
 
@@ -484,7 +488,7 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             temp_reader.read_u32(8).unwrap();
 
             // If the percentiles are correct, go ahead and use next value
-            if temp_reader.read_u8(4).unwrap() == expected_num_percentiles {
+            if temp_reader.read_u8(4).unwrap() == expected_num_percentiles || temp_reader.read_u8(4).unwrap() == 10 {
                 average_maxrgb = reader.read_u32(8).unwrap();
             }
 
@@ -494,14 +498,23 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             let num_distribution_maxrgb_percentiles = reader.read_u8(4).unwrap();
 
             // The value of num_distribution_maxrgb_percentiles shall be 9
-            assert_eq!(num_distribution_maxrgb_percentiles, 9);
+            // or 10 if your name is Amazon, apparently
+            if num_distribution_maxrgb_percentiles == 9 {
+                correct_indexes = vec![1, 5, 10, 25, 50, 75, 90, 95, 99];
+            } else if num_distribution_maxrgb_percentiles == 10 {
+                correct_indexes = vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
+            } else {
+                panic!("Invalid number of percentiles: {}", num_distribution_maxrgb_percentiles);
+            }
 
             for _i in 0..num_distribution_maxrgb_percentiles {
                 distribution_index.push(reader.read_u8(7).unwrap());
                 distribution_values.push(reader.read_u32(17).unwrap());
             }
 
-            // Distribution indexes should be equal to  [1, 5, 10, 25, 50, 75, 90, 95, 99]
+            // Distribution indexes should be equal to:
+            // 9 indexes: [1, 5, 10, 25, 50, 75, 90, 95, 99]
+            // 10 indexes: [1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
             assert_eq!(distribution_index, correct_indexes);
 
             reader.read_u16(10).unwrap(); //fraction_bright_pixels, unused for now

@@ -1469,4 +1469,56 @@ mod tests {
         assert_eq!(test[0].knee_y, 0);
         assert_eq!(test[0].bezier_curve_data, Vec::<u16>::new());
     }
+
+    #[test]
+    fn sample55() {
+        let sample55_file = PathBuf::from("./assets/ToS-s55.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample55_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 350);
+        assert_eq!(test[0].average_maxrgb, 1);
+        assert_eq!(test[0].maxscl, vec![4425, 3984, 3292]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 0, 0, 0, 0, 0, 1, 5, 2756]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, vec![256, 512, 767]);
+    }
+
+    #[test]
+    fn sample56() {
+        let sample56_file = PathBuf::from("./assets/ToS-s56.h265");
+        let mut test: Vec<Metadata> = Vec::new();
+        match parse_metadata(false, &sample56_file, false) {
+            Ok(vec) => test = llc_read_metadata(vec),
+            Err(e) => println!("{}", e),
+        }
+
+        assert_eq!(test[0].num_windows, 1);
+        assert_eq!(test[0].targeted_system_display_maximum_luminance, 350);
+        assert_eq!(test[0].average_maxrgb, 1);
+        assert_eq!(test[0].maxscl, vec![0, 65536, 0]);
+        assert_eq!(
+            test[0].distribution_index,
+            vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
+        );
+        assert_eq!(
+            test[0].distribution_values,
+            vec![0, 0, 0, 0, 0, 0, 0, 1, 5, 2756]
+        );
+        assert_eq!(test[0].knee_x, 0);
+        assert_eq!(test[0].knee_y, 0);
+        assert_eq!(test[0].bezier_curve_data, vec![256, 512, 767]);
+    }
 }
