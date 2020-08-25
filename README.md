@@ -28,4 +28,4 @@ options:
 ## Sample files
 Tears of Steel samples encoded with x265 using `--dhdr10-info` for tests.
 
-Sample JSON metadata available here: https://bitbucket.org/multicoreware/x265/downloads/
+Sample JSON metadata available here: https://bitbucket.org/multicoreware/x265_git/downloads/
