@@ -353,7 +353,9 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                                 maxscl.push(maxscl_high);
                             } else if reader.remaining() == 320 && reader.position() == 120 {
                                 maxscl.push(maxscl_high);
-                            } else if reader.remaining() == 368 && reader.position() == 128 || reader.remaining() == 376 && reader.position() == 136 {
+                            } else if reader.remaining() == 368 && reader.position() == 128
+                                || reader.remaining() == 376 && reader.position() == 136
+                            {
                                 maxscl.push(maxscl_high);
                             } else {
                                 maxscl.push(temp);
@@ -474,7 +476,9 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                     } else {
                         reader.read_u32(8).unwrap();
                     }
-                } else if (temp_reader.remaining() == 322 && temp_reader.position() == 29) || (temp_reader.remaining() == 330 && temp_reader.position() == 29) {
+                } else if (temp_reader.remaining() == 322 && temp_reader.position() == 29)
+                    || (temp_reader.remaining() == 330 && temp_reader.position() == 29)
+                {
                     reader.read_u32(8).unwrap();
                 }
             }
@@ -488,7 +492,9 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             temp_reader.read_u32(8).unwrap();
 
             // If the percentiles are correct, go ahead and use next value
-            if temp_reader.read_u8(4).unwrap() == expected_num_percentiles || temp_reader.read_u8(4).unwrap() == 10 {
+            if temp_reader.read_u8(4).unwrap() == expected_num_percentiles
+                || temp_reader.read_u8(4).unwrap() == 10
+            {
                 average_maxrgb = reader.read_u32(8).unwrap();
             }
 
@@ -504,7 +510,10 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
             } else if num_distribution_maxrgb_percentiles == 10 {
                 correct_indexes = vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
             } else {
-                panic!("Invalid number of percentiles: {}", num_distribution_maxrgb_percentiles);
+                panic!(
+                    "Invalid number of percentiles: {}",
+                    num_distribution_maxrgb_percentiles
+                );
             }
 
             for _i in 0..num_distribution_maxrgb_percentiles {
@@ -607,9 +616,19 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
     print!("Writing metadata to JSON file... ");
     stdout().flush().ok();
 
+    // Get highest number of anchors (should be constant across frames other than empty)
+    let num_bezier_curve_anchors = match metadata.iter().map(|m| m.bezier_curve_data.len()).max() {
+        Some(max) => max,
+        None => 0,
+    };
+
+    // Use max with 0s instead of empty
+    let replacement_curve_data = vec![0; num_bezier_curve_anchors];
+
     let frame_json_list: Vec<Value> = metadata
         .iter()
         .map(|m| {
+            // Profile A
             if m.targeted_system_display_maximum_luminance == 0 && m.bezier_curve_data.is_empty() {
                 json!({
                     "LuminanceParameters": {
@@ -623,10 +642,17 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
                     "NumberOfWindows": m.num_windows,
                     "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
                 })
-            } else {
+            } else { // Profile B
+                // Don't insert empty vec when profile B
+                let bezier_curve_data = if m.bezier_curve_data.is_empty() && num_bezier_curve_anchors != 0 {
+                    &replacement_curve_data
+                } else {
+                    &m.bezier_curve_data
+                };
+
                 json!({
                     "BezierCurveData": {
-                        "Anchors": m.bezier_curve_data,
+                        "Anchors": bezier_curve_data,
                         "KneePointX": m.knee_x,
                         "KneePointY": m.knee_y
                     },
