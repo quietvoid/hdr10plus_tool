@@ -21,6 +21,7 @@ options:
 * `-o`, `--output <OUTPUT>` Sets the output JSON file to use.
 
 * `--verify` Checks if input file contains dynamic metadata.
+* `--force-single-profile` Force only one metadata profile, avoiding mixing different profiles (fix for x265 segfault).
 
 
 ### Piping with ffmpeg using Powershell is not supported.
