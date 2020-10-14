@@ -6,21 +6,29 @@ use std::fs::File;
 use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
-pub fn process_file(is_stdin: bool, input: &PathBuf, output: PathBuf, verify: bool) {
+use ansi_term::Colour::{Blue, Green, Red, Yellow};
+
+pub fn process_file(
+    is_stdin: bool,
+    input: &PathBuf,
+    output: PathBuf,
+    verify: bool,
+    force_single_profile: bool,
+) {
     let final_metadata: Vec<Metadata>;
 
     match parse_metadata(is_stdin, input, verify) {
         Ok(vec) => {
             //Match returned vec to check for --verify
             if vec[0][0] == 1 && vec[0].len() == 1 {
-                println!("Dynamic HDR10+ metadata detected.");
+                println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
             } else {
                 final_metadata = llc_read_metadata(vec);
                 //Sucessful parse & no --verify
                 if !final_metadata.is_empty() {
-                    write_json(output, final_metadata)
+                    write_json(output, final_metadata, force_single_profile)
                 } else {
-                    println!("Failed reading parsed metadata.");
+                    println!("{}", Red.paint("Failed reading parsed metadata."));
                 }
             }
         }
@@ -81,7 +89,10 @@ pub fn parse_metadata(
     let header: Vec<u8> = vec![0, 0, 1, 78, 1, 4];
     let mut current_sei: Vec<u8> = Vec::new();
 
-    println!("Parsing HEVC file for dynamic metadata... ");
+    println!(
+        "{}",
+        Blue.paint("Parsing HEVC file for dynamic metadata... ")
+    );
     stdout().flush().ok();
 
     let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
@@ -112,13 +123,13 @@ pub fn parse_metadata(
         }
 
         if !dynamic_detected {
-            pb.finish();
+            pb.finish_and_clear();
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "File doesn't contain dynamic metadata, stopping.",
             ));
         } else if verify {
-            pb.finish();
+            pb.finish_and_clear();
 
             let verified = vec![vec![1]];
 
@@ -131,13 +142,13 @@ pub fn parse_metadata(
         }
     }
 
-    pb.finish();
+    pb.finish_and_clear();
 
     Ok(final_sei_list)
 }
 
 fn process_bytes(
-    header: &Vec<u8>,
+    header: &[u8],
     byte: u8,
     current_sei: &mut Vec<u8>,
     mut dynamic_hdr_sei: bool,
@@ -167,7 +178,7 @@ fn process_bytes(
     } else if byte == 0 || byte == 1 || byte == 78 || byte == 4 {
         for i in 0..current_sei.len() {
             if current_sei[i] == header[i] {
-                if current_sei == header {
+                if current_sei == &header {
                     dynamic_hdr_sei = true;
                     break;
                 }
@@ -187,10 +198,10 @@ fn process_bytes(
 }
 
 pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
-    let mut correct_indexes = vec![];
+    let mut correct_indexes;
     let expected_num_percentiles = 9;
 
-    print!("Reading parsed dynamic metadata... ");
+    print!("{}", Blue.paint("Reading parsed dynamic metadata... "));
     stdout().flush().ok();
 
     let mut complete_metadata: Vec<Metadata> = Vec::new();
@@ -200,7 +211,7 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
         let bytes = &data[..];
 
         let mut reader = BitReader::new(bytes);
-        let mut temp_reader = reader.relative_reader();
+        let mut temp_reader;
 
         reader.read_u8(8).unwrap(); //country_code
         reader.read_u16(16).unwrap(); //terminal_provider_code
@@ -275,12 +286,13 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                     let skipped_byte = temp_reader.read_u32(8).unwrap();
                     let first_temp = temp_reader.read_u32(17).unwrap();
 
-                    if maxscl_high == 0 {
-                        if skipped_byte == 1 && first_temp >= 65536 && first_temp <= 100_000 {
-                            if targeted_system_display_maximum_luminance != 8192 {
-                                reader.read_u32(8).unwrap();
-                            }
-                        }
+                    if maxscl_high == 0
+                        && skipped_byte == 1
+                        && first_temp >= 65536
+                        && first_temp <= 100_000
+                        && targeted_system_display_maximum_luminance != 8192
+                    {
+                        reader.read_u32(8).unwrap();
                     } else if maxscl_high == 1
                         && (targeted_system_display_maximum_luminance == 0
                             || targeted_system_display_maximum_luminance % 32 == 0)
@@ -328,95 +340,78 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
                         if maxscl_high >= 65536 {
                             let temp: u32 = maxscl_high - 65536;
 
-                            if temp == 0 {
-                                if second_temp < 4 {
-                                    reader.read_u32(8).unwrap();
-                                }
+                            if temp == 0 && second_temp < 4 {
+                                reader.read_u32(8).unwrap();
                             }
 
-                            if temp != 0
+                            if (temp != 0
                                 && (targeted_system_display_maximum_luminance == 8192
                                     || maxscl[i - 1] == 32768
                                     || maxscl[i - 1] == 65536
-                                    || maxscl[i - 1] == 98304)
-                            {
-                                maxscl.push(maxscl_high);
-                            } else if (targeted_system_display_maximum_luminance >= 4096
-                                && targeted_system_display_maximum_luminance < 8192)
-                                && (reader.remaining() == 328 || reader.remaining() == 320)
-                            {
-                                maxscl.push(maxscl_high);
-                            } else if temp == 0
-                                && targeted_system_display_maximum_luminance == 8192
-                                && reader.position() == 136
-                            {
-                                maxscl.push(maxscl_high);
-                            } else if reader.remaining() == 320 && reader.position() == 120 {
-                                maxscl.push(maxscl_high);
-                            } else if reader.remaining() == 368 && reader.position() == 128
-                                || reader.remaining() == 376 && reader.position() == 136
+                                    || maxscl[i - 1] == 98304))
+                                || ((targeted_system_display_maximum_luminance >= 4096
+                                    && targeted_system_display_maximum_luminance < 8192)
+                                    && (reader.remaining() == 328 || reader.remaining() == 320))
+                                || (temp == 0
+                                    && targeted_system_display_maximum_luminance == 8192
+                                    && reader.position() == 136)
+                                || (reader.remaining() == 320 && reader.position() == 120)
+                                || (reader.remaining() == 368 && reader.position() == 128)
+                                || (reader.remaining() == 376 && reader.position() == 136)
                             {
                                 maxscl.push(maxscl_high);
                             } else {
                                 maxscl.push(temp);
                             }
-                        } else {
-                            if maxscl_high == 3
-                                && (targeted_system_display_maximum_luminance == 0
-                                    || targeted_system_display_maximum_luminance % 32 == 0)
-                            {
-                                maxscl.push(reader.read_u32(8).unwrap());
-                            } else if reader.position() != 128
+                        } else if (maxscl_high == 3
+                            && (targeted_system_display_maximum_luminance == 0
+                                || targeted_system_display_maximum_luminance % 32 == 0))
+                            || (reader.position() != 128
                                 && targeted_system_display_maximum_luminance != 8192
                                 && (maxscl[i - 1] == 32768
                                     || maxscl[i - 1] == 65536
                                     || maxscl[i - 1] == 98304)
-                                && maxscl_high == 768
-                            {
-                                maxscl.push(reader.read_u32(8).unwrap());
-                            } else if reader.remaining() > 336
-                                || (reader.remaining() == 336
-                                    && targeted_system_display_maximum_luminance == 8192)
-                            {
-                                maxscl.push(reader.read_u32(8).unwrap());
-                            } else {
-                                maxscl.push(maxscl_high);
-                            }
+                                && maxscl_high == 768)
+                            || reader.remaining() > 336
+                            || (reader.remaining() == 336
+                                && targeted_system_display_maximum_luminance == 8192)
+                        {
+                            maxscl.push(reader.read_u32(8).unwrap());
+                        } else {
+                            maxscl.push(maxscl_high);
                         }
-                    } else {
-                        if maxscl_high == 0 {
-                            if second_temp < 4 {
-                                reader.read_u32(8).unwrap();
+                    } else if maxscl_high == 0 {
+                        if second_temp < 4 {
+                            reader.read_u32(8).unwrap();
+                        }
+
+                        maxscl.push(maxscl_high);
+                    } else if maxscl_high == 3
+                        && (reader.remaining() == 344
+                            || reader.remaining() == 336
+                            || reader.remaining() == 328)
+                    {
+                        if maxscl[i - 1] < 2048 {
+                            if maxscl[i - 1] >= 128
+                                && maxscl[i - 1] < 2048
+                                && maxscl[i - 1] % 128 == 0
+                            {
+                                maxscl_high = reader.read_u32(8).unwrap();
                             }
 
                             maxscl.push(maxscl_high);
                         } else {
-                            if maxscl_high == 3
-                                && (reader.remaining() == 344
-                                    || reader.remaining() == 336
-                                    || reader.remaining() == 328)
-                            {
-                                if maxscl[i - 1] < 2048 {
-                                    if maxscl[i - 1] >= 128
-                                        && maxscl[i - 1] < 2048
-                                        && maxscl[i - 1] % 128 == 0
-                                    {
-                                        maxscl_high = reader.read_u32(8).unwrap();
-                                    }
-
-                                    maxscl.push(maxscl_high);
-                                } else {
-                                    maxscl.push(reader.read_u32(8).unwrap());
-                                }
-                            } else {
-                                maxscl.push(maxscl_high);
-                            }
+                            maxscl.push(reader.read_u32(8).unwrap());
                         }
+                    } else {
+                        maxscl.push(maxscl_high);
                     }
                 } else if maxscl[i - 1] == 0 {
-                    if maxscl_high == 6 && reader.remaining() != 303 {
-                        maxscl.push(reader.read_u32(8).unwrap());
-                    } else if maxscl[0] == 32768 || maxscl[0] == 65536 || maxscl[0] == 98304 {
+                    if (maxscl_high == 6 && reader.remaining() != 303)
+                        || maxscl[0] == 32768
+                        || maxscl[0] == 65536
+                        || maxscl[0] == 98304
+                    {
                         maxscl.push(reader.read_u32(8).unwrap());
                     } else {
                         maxscl.push(maxscl_high);
@@ -604,16 +599,16 @@ pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
         complete_metadata.push(meta);
     }
 
-    println!("Done.");
+    println!("{}", Green.paint("Done."));
 
     complete_metadata
 }
 
-fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
+fn write_json(output: PathBuf, metadata: Vec<Metadata>, force_single_profile: bool) {
     let save_file = File::create(output).expect("Can't create file");
     let mut writer = BufWriter::with_capacity(10_000_000, save_file);
 
-    print!("Writing metadata to JSON file... ");
+    print!("{}", Blue.paint("Writing metadata to JSON file... "));
     stdout().flush().ok();
 
     // Get highest number of anchors (should be constant across frames other than empty)
@@ -624,12 +619,15 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
 
     // Use max with 0s instead of empty
     let replacement_curve_data = vec![0; num_bezier_curve_anchors];
+    let mut warning = None;
+
+    let mut profile = "A";
 
     let frame_json_list: Vec<Value> = metadata
         .iter()
         .map(|m| {
-            // Profile A
-            if m.targeted_system_display_maximum_luminance == 0 && m.bezier_curve_data.is_empty() {
+            // Profile A, no bezier curve data
+            if m.targeted_system_display_maximum_luminance == 0 && m.bezier_curve_data.is_empty() && num_bezier_curve_anchors == 0 {
                 json!({
                     "LuminanceParameters": {
                         "AverageRGB": m.average_maxrgb,
@@ -643,10 +641,22 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
                     "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
                 })
             } else { // Profile B
-                // Don't insert empty vec when profile B
-                let bezier_curve_data = if m.bezier_curve_data.is_empty() && num_bezier_curve_anchors != 0 {
+                if profile != "B" {
+                    profile = "B";
+                }
+
+                // Don't insert empty vec when profile B and forcing single profile
+                let bezier_curve_data = if force_single_profile && m.bezier_curve_data.is_empty() && num_bezier_curve_anchors != 0 {
+                    if warning.is_none() {
+                        warning = Some(format!("{}", Yellow.paint("Forced profile B.")));
+                    }
+
                     &replacement_curve_data
                 } else {
+                    if warning.is_none() && m.bezier_curve_data.is_empty() && num_bezier_curve_anchors != 0 {
+                        warning = Some(format!("{} Different profiles appear to be present in the metadata, this can cause errors when used with x265.\nUse {} to \"fix\".", Yellow.paint("Warning:"), Yellow.paint("--force-single-profile")));
+                    }
+
                     &m.bezier_curve_data
                 };
 
@@ -672,7 +682,15 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
         })
         .collect::<Vec<Value>>();
 
-    let final_json = json!({ "SceneInfo": frame_json_list });
+    let json_info = json!({
+        "HDR10plusProfile": profile,
+        "Version": "1.0",
+    });
+
+    let final_json = json!({
+        "JSONInfo": json_info,
+        "SceneInfo": frame_json_list
+    });
 
     assert!(writeln!(
         writer,
@@ -681,7 +699,11 @@ fn write_json(output: PathBuf, metadata: Vec<Metadata>) {
     )
     .is_ok());
 
-    println!("Done.");
+    println!("{}", Green.paint("Done."));
+
+    if warning.is_some() {
+        println!("{}", warning.unwrap());
+    }
 
     writer.flush().ok();
 }
