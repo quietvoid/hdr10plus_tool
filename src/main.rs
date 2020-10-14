@@ -39,6 +39,12 @@ struct Opt {
 
     #[structopt(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
+
+    #[structopt(
+        long,
+        help = "Force only one metadata profile, avoiding mixing different profiles (fix for x265 segfault)"
+    )]
+    force_single_profile: bool,
 }
 
 fn main() -> std::io::Result<()> {
@@ -63,7 +69,7 @@ fn main() -> std::io::Result<()> {
     };
 
     match verify_input(&input) {
-        Ok(is_stdin) => process_file(is_stdin, &input, output, verify),
+        Ok(is_stdin) => process_file(is_stdin, &input, output, verify, opt.force_single_profile),
         Err(msg) => {
             println!("{}", msg);
         }
