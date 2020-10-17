@@ -1428,3 +1428,29 @@ fn sample59() {
         vec![1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023]
     );
 }
+
+#[test]
+fn sample60() {
+    let input_file = PathBuf::from("./assets/ToS-s60.h265");
+    let parser = Parser::new(false, input_file, None, false, false);
+    let result = parser._test().unwrap();
+
+    assert_eq!(result.num_windows, 1);
+    assert_eq!(result.targeted_system_display_maximum_luminance, 400);
+    assert_eq!(result.average_maxrgb, 0);
+    assert_eq!(result.maxscl, vec![0, 0, 0]);
+    assert_eq!(
+        DistributionMaxRgb::distribution_index(&result.distribution_maxrgb),
+        vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+    );
+    assert_eq!(
+        DistributionMaxRgb::distribution_values(&result.distribution_maxrgb),
+        vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+    );
+    assert_eq!(result.knee_point_x, 0);
+    assert_eq!(result.knee_point_y, 0);
+    assert_eq!(
+        result.bezier_curve_anchors,
+        vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
+    );
+}
