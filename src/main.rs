@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 mod hdr10plus;
-use crate::hdr10plus::process_file;
+use hdr10plus::parser::Parser;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -58,22 +58,22 @@ fn main() -> std::io::Result<()> {
         },
     };
 
-    let mut verify = opt.verify;
-
-    let output = match opt.output {
-        Some(out) => out,
-        None => {
-            verify = true;
-            PathBuf::new()
-        }
-    };
+    let verify = opt.verify || opt.output.is_none();
 
     match verify_input(&input) {
-        Ok(is_stdin) => process_file(is_stdin, &input, output, verify, opt.force_single_profile),
-        Err(msg) => {
-            println!("{}", msg);
+        Ok(is_stdin) => {
+            let parser = Parser::new(
+                is_stdin,
+                input,
+                opt.output,
+                verify,
+                opt.force_single_profile,
+            );
+            parser.process_file();
         }
+        Err(msg) => println!("{}", msg),
     }
+
     Ok(())
 }
 
