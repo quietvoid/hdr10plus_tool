@@ -2,6 +2,9 @@ use ansi_term::Colour::Yellow;
 use deku::prelude::*;
 use serde_json::{json, Value};
 
+const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
+const DISTRIBUTION_INDEXES_10: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
+
 #[derive(Debug, DekuRead, Clone)]
 #[deku(endian = "big")]
 pub struct Metadata {
@@ -74,9 +77,6 @@ pub struct DistributionMaxRgb {
     #[deku(bits = "17")]
     percentile: u32,
 }
-
-const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
-const DISTRIBUTION_INDEXES_10: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
 
 impl Metadata {
     pub fn validate(&self) {
