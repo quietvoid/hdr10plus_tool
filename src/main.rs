@@ -78,7 +78,7 @@ fn main() -> std::io::Result<()> {
 }
 
 fn verify_input(input: &PathBuf) -> Result<bool, String> {
-    let regex = Regex::new(r"\.(hevc|.?265)").unwrap();
+    let regex = Regex::new(r"\.(hevc|.?265|mkv)").unwrap();
     let file_name = match input.file_name() {
         Some(file_name) => file_name.to_str().unwrap(),
         None => "",

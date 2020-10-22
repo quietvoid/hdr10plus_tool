@@ -10,6 +10,9 @@ use serde_json::{json, Value};
 
 use super::metadata::Metadata;
 
+use av_format::{buffer::AccReader, demuxer::Context, demuxer::Event};
+use matroska::demuxer::MkvDemuxer;
+
 pub struct Parser {
     is_stdin: bool,
     input: PathBuf,
@@ -38,12 +41,19 @@ impl Parser {
     pub fn process_file(&self) {
         let final_metadata: Vec<Metadata>;
 
+        self.demux_matroska();
+        std::process::exit(1);
+
         match self.parse_metadata() {
             Ok(vec) => {
                 //Match returned vec to check for --verify
                 if vec[0][0] == 1 && vec[0].len() == 1 {
                     println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
                 } else {
+                    for m in &vec {
+                        println!("{:?}", m);
+                    }
+
                     final_metadata = Self::llc_read_metadata(vec);
                     //Sucessful parse & no --verify
                     if !final_metadata.is_empty() {
@@ -180,7 +190,7 @@ impl Parser {
                 dynamic_hdr_sei = false;
                 dynamic_detected = true;
             }
-        } else if byte == 0 || byte == 1 || byte == 78 || byte == 4 {
+        } else if byte == 0 || byte == 1 || byte == 78 || byte == 4 || byte == 128 {
             for i in 0..current_sei.len() {
                 if current_sei[i] == header[i] {
                     if current_sei == &header {
@@ -298,6 +308,100 @@ impl Parser {
             metadata.first().cloned()
         } else {
             None
+        }
+    }
+
+    fn demux_matroska(&self) {
+        let reader = File::open(&self.input).unwrap();
+        let ar = AccReader::with_capacity(1024, reader);
+        let mut demuxer = Context::new(Box::new(MkvDemuxer::new()), Box::new(ar));
+
+        demuxer
+            .read_headers()
+            .expect("Cannot parse the format headers");
+
+        let final_metadata: Vec<Metadata>;
+
+        let header: &[Option<u8>] = &[Some(128), Some(0), Some(0), Some(0), None, Some(78), Some(1), Some(4)];
+        let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
+
+        while let Ok(metadata) = match demuxer.read_event() {
+            Ok(event) => match event {
+                Event::NewPacket(pkt) => {
+                    self.parse_itu_t35_sei_payload(&pkt.data, header)
+                }
+                Event::NewStream(_) => Err("Stream changed"),
+                Event::MoreDataNeeded(_) => Err("ok1"),
+                Event::Continue => Err("2"),
+                Event::Eof => Err("OK"),
+                _ => Err("ok2"),
+            }
+            Err(e) => panic!("{:?}", e),
+        } {
+            final_sei_list.push(metadata);
+        }
+
+        if !final_sei_list.is_empty() {
+            for m in &final_sei_list {
+                println!("{:?}", m);
+            }
+
+            if self.verify {
+                println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
+            } else {
+                final_metadata = Self::llc_read_metadata(final_sei_list);
+                //Sucessful parse & no --verify
+                if !final_metadata.is_empty() {
+                    self.write_json(final_metadata)
+                } else {
+                    println!("{}", Red.paint("Failed reading parsed metadata."));
+                }
+            }
+        }
+    }
+
+    fn parse_itu_t35_sei_payload(&self, data: &[u8], header: &[Option<u8>]) -> Result<Vec<u8>, &str> {
+        let mut metadata: Option<&[u8]> = None;
+
+        let length = data.len();
+        let first = header[0].unwrap();
+        for (offset, n) in data.iter().enumerate() {
+            if n == &first {
+                let all_match_header = header.iter()
+                    .enumerate()
+                    .map(|(j, v)| {
+                        // Matches all header but None (wildcard)
+                        if offset + j >= length {
+                            false
+                        } else if v.is_some() {
+                            data[offset + j] == v.unwrap()
+                        } else {
+                            true
+                        }
+                            
+                    })
+                    .all(|v| v == true);
+
+                if all_match_header {
+                    for (k, v) in data[offset..].iter().enumerate() {
+                        if offset + k >= length - 3 {
+                            break;
+                        } else if v == &128 && k != 0 {
+                            let off = offset + k;
+                            if data[off + 1] == 0 && data[off + 2] == 0 && (data[off + 3] == 0 || data[off + 3] == 1) {
+                                metadata = Some(&data[offset + header.len() + 1 .. off + 1]);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if metadata.is_some() {
+            Ok(metadata.unwrap().to_owned())
+        } else {
+            Err("File doesn't contain dynamic metadata, stopping.")
         }
     }
 }

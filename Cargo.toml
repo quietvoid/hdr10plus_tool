@@ -14,3 +14,7 @@ read-byte-slice = "0.1.2"
 regex = "1.4.1"
 ansi_term = "0.12.1"
 deku = "0.8.0"
+av-codec = "*"
+av-data = "0.2.2"
+av-format = "*"
+matroska = { version = "0.1.0", git = "https://github.com/rust-av/matroska" }
