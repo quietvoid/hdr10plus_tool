@@ -5,7 +5,7 @@ use crate::hdr10plus::parser::{Format, Parser};
 
 // x265 Tool_Verification_new_hdr10plus_llc.json 1st frame
 #[test]
-fn sample1() {
+fn sample01() {
     let input_file = PathBuf::from("./assets/raw/sample01.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -34,7 +34,7 @@ fn sample1() {
 
 // All 0 values except arrays
 #[test]
-fn sample2() {
+fn sample02() {
     let input_file = PathBuf::from("./assets/raw/sample02.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -63,7 +63,7 @@ fn sample2() {
 
 // Some small values
 #[test]
-fn sample3() {
+fn sample03() {
     let input_file = PathBuf::from("./assets/raw/sample03.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -92,7 +92,7 @@ fn sample3() {
 
 // More random values
 #[test]
-fn sample4() {
+fn sample04() {
     let input_file = PathBuf::from("./assets/raw/sample04.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -121,7 +121,7 @@ fn sample4() {
 
 // Some 0 values except targeted display maximum luminance
 #[test]
-fn sample5() {
+fn sample05() {
     let input_file = PathBuf::from("./assets/raw/sample05.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -150,7 +150,7 @@ fn sample5() {
 
 // More random values
 #[test]
-fn sample6() {
+fn sample06() {
     let input_file = PathBuf::from("./assets/raw/sample06.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -179,7 +179,7 @@ fn sample6() {
 
 // Edge case with averageRGB
 #[test]
-fn sample7() {
+fn sample07() {
     let input_file = PathBuf::from("./assets/raw/sample07.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -208,7 +208,7 @@ fn sample7() {
 
 // Low averageRGB and MaxScl 0s
 #[test]
-fn sample8() {
+fn sample08() {
     let input_file = PathBuf::from("./assets/raw/sample08.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
@@ -237,7 +237,7 @@ fn sample8() {
 
 // Low averageRGB, MaxScl 0s and TargetedSystemDisplayMaximumLuminance 0
 #[test]
-fn sample9() {
+fn sample09() {
     let input_file = PathBuf::from("./assets/raw/sample09.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();

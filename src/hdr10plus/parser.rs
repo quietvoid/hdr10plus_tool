@@ -208,24 +208,7 @@ impl Parser {
 
         //Loop over lines and read metadata, HDR10+ LLC format
         for data in input.iter() {
-            // Clear x265's injected 0x03 byte if it is present
-            // See https://bitbucket.org/multicoreware/x265_git/src/a82c6c7a7d5f5ef836c82941788a37c6a443e0fe/source/encoder/nal.cpp?at=master#lines-119:136
-            let bytes = data
-                .iter()
-                .enumerate()
-                .filter_map(|(index, value)| {
-                    if index > 2
-                        && index < data.len() - 2
-                        && data[index - 2] == 0
-                        && data[index - 1] == 0
-                        && data[index] <= 3
-                    {
-                        None
-                    } else {
-                        Some(*value)
-                    }
-                })
-                .collect::<Vec<u8>>();
+            let (_, bytes) = remove_x265_injected_byte(&data);
 
             // Parse metadata
             let (_rest, metadata) = Metadata::from_bytes((&bytes, 0)).unwrap();
@@ -298,16 +281,7 @@ impl Parser {
             .read_headers()
             .expect("Cannot parse the format headers");
 
-        let header: &[Option<u8>] = &[
-            Some(128),
-            Some(0),
-            Some(0),
-            Some(0),
-            None,
-            Some(78),
-            Some(1),
-            Some(4),
-        ];
+        let header: &[Option<u8>] = &[Some(0), Some(0), Some(0), None, Some(78), Some(1), Some(4)];
         let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
 
         while let Ok(metadata) = match demuxer.read_event() {
@@ -360,16 +334,24 @@ impl Parser {
                     .all(|v| v);
 
                 if all_match_header {
-                    for (k, v) in data[offset..].iter().enumerate() {
-                        if offset + k >= length - 3 {
-                            break;
-                        } else if v == &128 && k != 0 {
-                            let off = offset + k;
-                            if data[off - 1] == 0 && data[off + 1] == 0 && data[off + 2] == 0 {
-                                return Ok(data[offset + header.len() + 1 .. off + 1].to_owned());
-                            }
-                        }
-                    }
+                    let size = data[offset + header.len()] as usize;
+
+                    let start = offset + 8;
+                    let end = if start + size > length {
+                        length - 1
+                    } else {
+                        start + size + 8
+                    };
+
+                    let temp = &data[start..end];
+                    let (bytes_removed, _bytes) = remove_x265_injected_byte(&temp);
+                    let end = if end + bytes_removed > length {
+                        length - 1
+                    } else {
+                        end + bytes_removed
+                    };
+
+                    return Ok(data[start..end as usize].to_owned());
                 }
             }
         }
@@ -388,4 +370,29 @@ impl Parser {
             None
         }
     }
+}
+
+pub fn remove_x265_injected_byte(data: &[u8]) -> (usize, Vec<u8>) {
+    let mut count = 0;
+    // Clear x265's injected 0x03 byte if it is present
+    // See https://bitbucket.org/multicoreware/x265_git/src/a82c6c7a7d5f5ef836c82941788a37c6a443e0fe/source/encoder/nal.cpp?at=master#lines-119:136
+    let bytes = data
+        .iter()
+        .enumerate()
+        .filter_map(|(index, value)| {
+            if index > 2
+                && index < data.len() - 2
+                && data[index - 2] == 0
+                && data[index - 1] == 0
+                && data[index] <= 3
+            {
+                count += 1;
+                None
+            } else {
+                Some(*value)
+            }
+        })
+        .collect::<Vec<u8>>();
+
+    (count, bytes)
 }

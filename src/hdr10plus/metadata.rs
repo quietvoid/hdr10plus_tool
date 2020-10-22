@@ -62,7 +62,11 @@ pub struct Metadata {
     #[deku(bits = "4", cond = "*tone_mapping_flag == 1")]
     pub num_bezier_curve_anchors: u8,
 
-    #[deku(count = "num_bezier_curve_anchors", bits = "10", cond = "*tone_mapping_flag == 1")]
+    #[deku(
+        count = "num_bezier_curve_anchors",
+        bits = "10",
+        cond = "*tone_mapping_flag == 1"
+    )]
     pub bezier_curve_anchors: Vec<u16>,
 
     #[deku(bits = "1")]
