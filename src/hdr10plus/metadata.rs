@@ -53,16 +53,16 @@ pub struct Metadata {
     #[deku(bits = "1")]
     pub tone_mapping_flag: u8,
 
-    #[deku(bits = "12")]
+    #[deku(bits = "12", cond = "*tone_mapping_flag == 1")]
     pub knee_point_x: u16,
 
-    #[deku(bits = "12")]
+    #[deku(bits = "12", cond = "*tone_mapping_flag == 1")]
     pub knee_point_y: u16,
 
-    #[deku(bits = "4")]
+    #[deku(bits = "4", cond = "*tone_mapping_flag == 1")]
     pub num_bezier_curve_anchors: u8,
 
-    #[deku(count = "num_bezier_curve_anchors", bits = "10")]
+    #[deku(count = "num_bezier_curve_anchors", bits = "10", cond = "*tone_mapping_flag == 1")]
     pub bezier_curve_anchors: Vec<u16>,
 
     #[deku(bits = "1")]
