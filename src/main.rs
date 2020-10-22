@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 mod hdr10plus;
-use hdr10plus::parser::Parser;
+use hdr10plus::parser::{Format, Parser};
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -60,15 +60,9 @@ fn main() -> std::io::Result<()> {
 
     let verify = opt.verify || opt.output.is_none();
 
-    match verify_input(&input) {
-        Ok(is_stdin) => {
-            let parser = Parser::new(
-                is_stdin,
-                input,
-                opt.output,
-                verify,
-                opt.force_single_profile,
-            );
+    match input_format(&input) {
+        Ok(format) => {
+            let parser = Parser::new(format, input, opt.output, verify, opt.force_single_profile);
             parser.process_file();
         }
         Err(msg) => println!("{}", msg),
@@ -77,7 +71,7 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn verify_input(input: &PathBuf) -> Result<bool, String> {
+fn input_format(input: &PathBuf) -> Result<Format, &str> {
     let regex = Regex::new(r"\.(hevc|.?265|mkv)").unwrap();
     let file_name = match input.file_name() {
         Some(file_name) => file_name.to_str().unwrap(),
@@ -85,16 +79,18 @@ fn verify_input(input: &PathBuf) -> Result<bool, String> {
     };
 
     if file_name == "-" {
-        // is stdin
-        Ok(true)
+        Ok(Format::RawStdin)
     } else if regex.is_match(file_name) && input.is_file() {
-        // is file
-        Ok(false)
+        if file_name.contains("mkv") {
+            Ok(Format::Matroska)
+        } else {
+            Ok(Format::Raw)
+        }
     } else if file_name == "" {
-        Err(String::from("Missing input"))
+        Err("Missing input.")
     } else if !input.is_file() {
-        Err(String::from("Input file doesn't exist."))
+        Err("Input file doesn't exist.")
     } else {
-        Err(String::from("Invalid input file type."))
+        Err("Invalid input file type.")
     }
 }

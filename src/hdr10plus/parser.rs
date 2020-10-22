@@ -13,8 +13,14 @@ use super::metadata::Metadata;
 use av_format::{buffer::AccReader, demuxer::Context, demuxer::Event};
 use matroska::demuxer::MkvDemuxer;
 
+pub enum Format {
+    Raw,
+    RawStdin,
+    Matroska,
+}
+
 pub struct Parser {
-    is_stdin: bool,
+    format: Format,
     input: PathBuf,
     output: Option<PathBuf>,
     verify: bool,
@@ -23,14 +29,14 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(
-        is_stdin: bool,
+        format: Format,
         input: PathBuf,
         output: Option<PathBuf>,
         verify: bool,
         force_single_profile: bool,
     ) -> Self {
         Self {
-            is_stdin,
+            format,
             input,
             output,
             verify,
@@ -39,35 +45,30 @@ impl Parser {
     }
 
     pub fn process_file(&self) {
-        let final_metadata: Vec<Metadata>;
+        println!(
+            "{}",
+            Blue.paint("Parsing HEVC file for dynamic metadata... ")
+        );
 
-        self.demux_matroska();
-        std::process::exit(1);
+        let result = match self.format {
+            Format::Matroska => self.parse_matroska(),
+            _ => self.parse_raw_hevc(),
+        };
 
-        match self.parse_metadata() {
+        match result {
             Ok(vec) => {
-                //Match returned vec to check for --verify
+                // Match returned vec to check for --verify
                 if vec[0][0] == 1 && vec[0].len() == 1 {
-                    println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
+                    println!("{}", Green.paint("Dynamic HDR10+ metadata detected."));
                 } else {
-                    for m in &vec {
-                        println!("{:?}", m);
-                    }
-
-                    final_metadata = Self::llc_read_metadata(vec);
-                    //Sucessful parse & no --verify
-                    if !final_metadata.is_empty() {
-                        self.write_json(final_metadata)
-                    } else {
-                        println!("{}", Red.paint("Failed reading parsed metadata."));
-                    }
+                    self.write_json(Self::llc_parse_metadata(vec))
                 }
             }
-            Err(e) => println!("{}", e),
+            Err(e) => println!("{}", Red.paint(e)),
         }
     }
 
-    pub fn parse_metadata(&self) -> Result<Vec<Vec<u8>>, std::io::Error> {
+    pub fn parse_raw_hevc(&self) -> Result<Vec<Vec<u8>>, &str> {
         //BufReader & BufWriter
         let stdin = std::io::stdin();
         let mut reader = Box::new(stdin.lock()) as Box<dyn BufRead>;
@@ -75,7 +76,7 @@ impl Parser {
 
         let pb: ProgressBar;
 
-        if self.is_stdin {
+        if let Format::RawStdin = self.format {
             pb = ProgressBar::hidden();
         } else {
             let file = File::open(&self.input).expect("No file found");
@@ -103,13 +104,6 @@ impl Parser {
         //Bitstream blocks for SMPTE 2094-40
         let header: Vec<u8> = vec![0, 0, 1, 78, 1, 4];
         let mut current_sei: Vec<u8> = Vec::new();
-
-        println!(
-            "{}",
-            Blue.paint("Parsing HEVC file for dynamic metadata... ")
-        );
-        stdout().flush().ok();
-
         let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
 
         let mut dynamic_hdr_sei = false;
@@ -117,7 +111,7 @@ impl Parser {
         let mut cur_byte = 0;
 
         //Loop over iterator of byte chunks for faster I/O
-        while let Some(chunk) = iter.next()? {
+        while let Ok(Some(chunk)) = iter.next() {
             for byte in chunk {
                 let byte = *byte;
 
@@ -138,17 +132,9 @@ impl Parser {
             }
 
             if !dynamic_detected {
-                pb.finish_and_clear();
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "File doesn't contain dynamic metadata, stopping.",
-                ));
+                return Err("File doesn't contain dynamic metadata, stopping.");
             } else if self.verify {
-                pb.finish_and_clear();
-
-                let verified = vec![vec![1]];
-
-                return Ok(verified);
+                return Ok(vec![vec![1]]);
             }
 
             if cur_byte >= 100_000_000 {
@@ -157,9 +143,11 @@ impl Parser {
             }
         }
 
-        pb.finish_and_clear();
-
-        Ok(final_sei_list)
+        if !final_sei_list.is_empty() {
+            Ok(final_sei_list)
+        } else {
+            Err("Failed parsing metadata")
+        }
     }
 
     fn process_bytes(
@@ -212,7 +200,7 @@ impl Parser {
         (dynamic_hdr_sei, dynamic_detected)
     }
 
-    pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
+    pub fn llc_parse_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
         print!("{}", Blue.paint("Reading parsed dynamic metadata... "));
         stdout().flush().ok();
 
@@ -257,13 +245,17 @@ impl Parser {
     }
 
     fn write_json(&self, metadata: Vec<Metadata>) {
+        if metadata.is_empty() {
+            println!("Failed parsing metadata to JSON");
+            return;
+        }
+
         match &self.output {
             Some(path) => {
                 let save_file = File::create(path).expect("Can't create file");
                 let mut writer = BufWriter::with_capacity(10_000_000, save_file);
 
                 print!("{}", Blue.paint("Writing metadata to JSON file... "));
-                stdout().flush().ok();
 
                 let (profile, frame_json_list, warning): (&str, Vec<Value>, Option<String>) =
                     Metadata::json_list(&metadata, self.force_single_profile);
@@ -297,22 +289,8 @@ impl Parser {
         }
     }
 
-    pub fn _test(&self) -> Option<Metadata> {
-        let mut metadata: Vec<Metadata> = Vec::new();
-        match self.parse_metadata() {
-            Ok(vec) => metadata = Parser::llc_read_metadata(vec),
-            Err(e) => println!("{}", e),
-        }
-
-        if !metadata.is_empty() {
-            metadata.first().cloned()
-        } else {
-            None
-        }
-    }
-
-    fn demux_matroska(&self) {
-        let reader = File::open(&self.input).unwrap();
+    fn parse_matroska(&self) -> Result<Vec<Vec<u8>>, &str> {
+        let reader = File::open(&self.input).expect("No file found");
         let ar = AccReader::with_capacity(1024, reader);
         let mut demuxer = Context::new(Box::new(MkvDemuxer::new()), Box::new(ar));
 
@@ -320,54 +298,54 @@ impl Parser {
             .read_headers()
             .expect("Cannot parse the format headers");
 
-        let final_metadata: Vec<Metadata>;
-
-        let header: &[Option<u8>] = &[Some(128), Some(0), Some(0), Some(0), None, Some(78), Some(1), Some(4)];
+        let header: &[Option<u8>] = &[
+            Some(128),
+            Some(0),
+            Some(0),
+            Some(0),
+            None,
+            Some(78),
+            Some(1),
+            Some(4),
+        ];
         let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
 
         while let Ok(metadata) = match demuxer.read_event() {
             Ok(event) => match event {
-                Event::NewPacket(pkt) => {
-                    self.parse_itu_t35_sei_payload(&pkt.data, header)
-                }
+                Event::NewPacket(pkt) => self.parse_itu_t35_sei_payload(&pkt.data, header),
                 Event::NewStream(_) => Err("Stream changed"),
                 Event::MoreDataNeeded(_) => Err("ok1"),
                 Event::Continue => Err("2"),
                 Event::Eof => Err("OK"),
                 _ => Err("ok2"),
-            }
+            },
             Err(e) => panic!("{:?}", e),
         } {
+            if self.verify {
+                return Ok(vec![vec![1]]);
+            }
+
             final_sei_list.push(metadata);
         }
 
         if !final_sei_list.is_empty() {
-            for m in &final_sei_list {
-                println!("{:?}", m);
-            }
-
-            if self.verify {
-                println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
-            } else {
-                final_metadata = Self::llc_read_metadata(final_sei_list);
-                //Sucessful parse & no --verify
-                if !final_metadata.is_empty() {
-                    self.write_json(final_metadata)
-                } else {
-                    println!("{}", Red.paint("Failed reading parsed metadata."));
-                }
-            }
+            Ok(final_sei_list)
+        } else {
+            Err("File doesn't contain dynamic metadata, stopping.")
         }
     }
 
-    fn parse_itu_t35_sei_payload(&self, data: &[u8], header: &[Option<u8>]) -> Result<Vec<u8>, &str> {
-        let mut metadata: Option<&[u8]> = None;
-
+    fn parse_itu_t35_sei_payload(
+        &self,
+        data: &[u8],
+        header: &[Option<u8>],
+    ) -> Result<Vec<u8>, &str> {
         let length = data.len();
         let first = header[0].unwrap();
         for (offset, n) in data.iter().enumerate() {
             if n == &first {
-                let all_match_header = header.iter()
+                let all_match_header = header
+                    .iter()
                     .enumerate()
                     .map(|(j, v)| {
                         // Matches all header but None (wildcard)
@@ -378,9 +356,8 @@ impl Parser {
                         } else {
                             true
                         }
-                            
                     })
-                    .all(|v| v == true);
+                    .all(|v| v);
 
                 if all_match_header {
                     for (k, v) in data[offset..].iter().enumerate() {
@@ -388,9 +365,8 @@ impl Parser {
                             break;
                         } else if v == &128 && k != 0 {
                             let off = offset + k;
-                            if data[off + 1] == 0 && data[off + 2] == 0 && (data[off + 3] == 0 || data[off + 3] == 1) {
-                                metadata = Some(&data[offset + header.len() + 1 .. off + 1]);
-                                break;
+                            if data[off - 1] == 0 && data[off + 1] == 0 && data[off + 2] == 0 {
+                                return Ok(data[offset + header.len() + 1 .. off + 1].to_owned());
                             }
                         }
                     }
@@ -398,10 +374,18 @@ impl Parser {
             }
         }
 
-        if metadata.is_some() {
-            Ok(metadata.unwrap().to_owned())
+        Err("File doesn't contain dynamic metadata, stopping.")
+    }
+
+    pub fn _test(&self) -> Option<(usize, Metadata)> {
+        if let Ok(vec) = match self.format {
+            Format::Matroska => self.parse_matroska(),
+            _ => self.parse_raw_hevc(),
+        } {
+            let results = Parser::llc_parse_metadata(vec);
+            Some((results.len(), results.first().cloned().unwrap()))
         } else {
-            Err("File doesn't contain dynamic metadata, stopping.")
+            None
         }
     }
 }
