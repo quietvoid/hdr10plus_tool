@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use super::metadata::DistributionMaxRgb;
-use super::parser::{Format, Parser};
+use crate::hdr10plus::metadata::DistributionMaxRgb;
+use crate::hdr10plus::parser::{Format, Parser};
 
 // x265 Tool_Verification_new_hdr10plus_llc.json 1st frame
 #[test]
@@ -410,7 +410,7 @@ fn sample15() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (count, result) = parser._test().unwrap();
 
-    assert_eq!(count, 1);
+    assert_eq!(count, 60);
 
     assert_eq!(result.num_windows, 1);
     assert_eq!(result.targeted_system_display_maximum_luminance, 9998);
