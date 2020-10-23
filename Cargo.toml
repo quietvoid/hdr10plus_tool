@@ -17,4 +17,4 @@ deku = "0.8.0"
 av-codec = "0.2.1"
 av-data = "0.2.2"
 av-format = "0.2.1"
-matroska = { version = "0.1.0", git = "https://github.com/rust-av/matroska" }
+matroska = { version = "0.1.0", path = "../matroska" }

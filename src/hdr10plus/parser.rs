@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use super::metadata::Metadata;
 
 use av_format::{buffer::AccReader, demuxer::Context, demuxer::Event};
-use matroska::demuxer::MkvDemuxer;
+use matroska::demuxer::{DemuxerParams, MkvDemuxer};
 
 pub enum Format {
     Raw,
@@ -47,13 +47,38 @@ impl Parser {
     pub fn process_file(&self) {
         println!(
             "{}",
-            Blue.paint("Parsing HEVC file for dynamic metadata... ")
+            Blue.paint(format!("Parsing {} for dynamic metadata... ", self.format))
         );
 
+        let pb: ProgressBar;
+        let bytes_count;
+
+        if let Format::RawStdin = self.format {
+            pb = ProgressBar::hidden();
+        } else {
+            let file = File::open(&self.input).expect("No file found");
+
+            //Info for indicatif ProgressBar
+            let file_meta = file.metadata();
+            bytes_count = file_meta.unwrap().len() / 100_000_000;
+
+            if self.verify {
+                pb = ProgressBar::hidden();
+            } else {
+                pb = ProgressBar::new(bytes_count);
+                pb.set_style(
+                    ProgressStyle::default_bar()
+                        .template("[{elapsed_precise}] {bar:60.cyan} {percent}%"),
+                );
+            }
+        }
+
         let result = match self.format {
-            Format::Matroska => self.parse_matroska(),
-            _ => self.parse_raw_hevc(),
+            Format::Matroska => self.parse_matroska(Some(&pb)),
+            _ => self.parse_raw_hevc(Some(&pb)),
         };
+
+        pb.finish_and_clear();
 
         match result {
             Ok(vec) => {
@@ -68,58 +93,57 @@ impl Parser {
         }
     }
 
-    pub fn parse_raw_hevc(&self) -> Result<Vec<Vec<u8>>, &str> {
+    pub fn parse_raw_hevc(&self, pb: Option<&ProgressBar>) -> Result<Vec<Vec<u8>>, &str> {
         //BufReader & BufWriter
         let stdin = std::io::stdin();
         let mut reader = Box::new(stdin.lock()) as Box<dyn BufRead>;
-        let bytes_count;
 
-        let pb: ProgressBar;
-
-        if let Format::RawStdin = self.format {
-            pb = ProgressBar::hidden();
-        } else {
+        if let Format::Raw = self.format {
             let file = File::open(&self.input).expect("No file found");
-
-            //Info for indicatif ProgressBar
-            let file_meta = file.metadata();
-            bytes_count = file_meta.unwrap().len() / 100_000_000;
-
             reader = Box::new(BufReader::new(file));
-
-            if self.verify {
-                pb = ProgressBar::hidden();
-            } else {
-                pb = ProgressBar::new(bytes_count);
-                pb.set_style(
-                    ProgressStyle::default_bar()
-                        .template("[{elapsed_precise}] {bar:60.cyan} {percent}%"),
-                );
-            }
         }
 
         //Byte chunk iterator
         let mut iter = ByteSliceIter::new(reader, 100_000);
 
         //Bitstream blocks for SMPTE 2094-40
-        let header: &[Option<u8>] = &[Some(0), Some(0), Some(1), Some(78), Some(1), Some(4)];
+        let header: Vec<u8> = vec![0, 0, 1, 78, 1, 4];
+        let mut current_sei: Vec<u8> = Vec::new();
         let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
 
+        let mut dynamic_hdr_sei = false;
+        let mut dynamic_detected = false;
         let mut cur_byte = 0;
 
         //Loop over iterator of byte chunks for faster I/O
         while let Ok(Some(chunk)) = iter.next() {
-            match self.parse_itu_t35_sei_payload(chunk, header, Some(&mut final_sei_list)) {
-                Ok(_) => {
-                    if self.verify {
-                        return Ok(vec![vec![1]]);
-                    }
+            for byte in chunk {
+                let byte = *byte;
+
+                cur_byte += 1;
+
+                let tuple = Self::process_bytes(
+                    &header,
+                    byte,
+                    &mut current_sei,
+                    dynamic_hdr_sei,
+                    &mut final_sei_list,
+                );
+                dynamic_hdr_sei = tuple.0;
+
+                if tuple.1 {
+                    dynamic_detected = true;
                 }
-                Err(e) => return Err(e),
             }
 
-            if cur_byte >= 100_000_000 {
-                pb.inc(1);
+            if !dynamic_detected {
+                return Err("File doesn't contain dynamic metadata, stopping.");
+            } else if self.verify {
+                return Ok(vec![vec![1]]);
+            }
+
+            if cur_byte >= 100_000_000 && pb.is_some() {
+                pb.unwrap().inc(1);
                 cur_byte = 0;
             }
         }
@@ -129,6 +153,57 @@ impl Parser {
         } else {
             Err("Failed parsing metadata")
         }
+    }
+
+
+    fn process_bytes(
+        header: &[u8],
+        byte: u8,
+        current_sei: &mut Vec<u8>,
+        mut dynamic_hdr_sei: bool,
+        final_sei_list: &mut Vec<Vec<u8>>,
+    ) -> (bool, bool) {
+        let mut dynamic_detected = false;
+
+        current_sei.push(byte);
+        if dynamic_hdr_sei {
+            let last = current_sei.len() - 1;
+
+            if current_sei[last - 3] == 128
+                && current_sei[last - 2] == 0
+                && current_sei[last - 1] == 0
+                && (current_sei[last] == 1 || current_sei[last] == 0)
+            {
+                let final_sei = &current_sei[7..current_sei.len() - 3];
+
+                //Push SEI message to final vec
+                final_sei_list.push(final_sei.to_vec());
+
+                //Clear current vec for next pattern match
+                current_sei.clear();
+                dynamic_hdr_sei = false;
+                dynamic_detected = true;
+            }
+        } else if byte == 0 || byte == 1 || byte == 78 || byte == 4 || byte == 128 {
+            for i in 0..current_sei.len() {
+                if current_sei[i] == header[i] {
+                    if current_sei == &header {
+                        dynamic_hdr_sei = true;
+                        break;
+                    }
+                } else if current_sei.len() < 3 {
+                    current_sei.clear();
+                    break;
+                } else {
+                    current_sei.pop();
+                    break;
+                }
+            }
+        } else if !current_sei.is_empty() {
+            current_sei.clear();
+        }
+
+        (dynamic_hdr_sei, dynamic_detected)
     }
 
     pub fn llc_parse_metadata(input: Vec<Vec<u8>>) -> Vec<Metadata> {
@@ -203,10 +278,14 @@ impl Parser {
         }
     }
 
-    fn parse_matroska(&self) -> Result<Vec<Vec<u8>>, &str> {
+    fn parse_matroska(&self, pb: Option<&ProgressBar>) -> Result<Vec<Vec<u8>>, &str> {
         let reader = File::open(&self.input).expect("No file found");
         let ar = AccReader::with_capacity(1024, reader);
-        let mut demuxer = Context::new(Box::new(MkvDemuxer::new()), Box::new(ar));
+
+        let params = DemuxerParams {
+            track_numbers: Some(vec![1]),
+        };
+        let mut demuxer = Context::new(Box::new(MkvDemuxer::with_params(params)), Box::new(ar));
 
         demuxer
             .read_headers()
@@ -214,15 +293,16 @@ impl Parser {
 
         let header: &[Option<u8>] = &[Some(0), Some(0), Some(0), None, Some(78), Some(1), Some(4)];
         let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
+        let mut cur_byte = 0;
 
         while let Ok(metadata) = match demuxer.read_event() {
             Ok(event) => match event {
-                Event::NewPacket(pkt) => self.parse_itu_t35_sei_payload(&pkt.data, header, None),
-                Event::NewStream(_) => Err("Stream changed"),
-                Event::MoreDataNeeded(_) => Err("ok1"),
-                Event::Continue => Err("2"),
-                Event::Eof => Err("OK"),
-                _ => Err("ok2"),
+                Event::NewPacket(pkt) => self.parse_itu_t35_sei_payload(&pkt.data, header, pb, &mut cur_byte),
+                Event::NewStream(_) => Err("NewStream"),
+                Event::MoreDataNeeded(_) => Err("MoreDataNeeded"),
+                Event::Continue => Err("Continue"),
+                Event::Eof => Err("End of file"),
+                _ => Err(""),
             },
             Err(e) => panic!("{:?}", e),
         } {
@@ -244,10 +324,9 @@ impl Parser {
         &self,
         data: &[u8],
         header: &[Option<u8>],
-        mut final_list: Option<&mut Vec<Vec<u8>>>,
+        pb: Option<&ProgressBar>,
+        cur_byte: &mut usize,
     ) -> Result<Vec<u8>, &str> {
-        let mut metadata_detected = false;
-
         let length = data.len();
         let first = header[0].unwrap();
         for (offset, n) in data.iter().enumerate() {
@@ -268,11 +347,10 @@ impl Parser {
                     .all(|v| v);
 
                 if all_match_header {
-                    metadata_detected = true;
                     let size = data[offset + header.len()] as usize;
 
                     let start = offset + header.len() + 1;
-                    let end = if start + size > length {
+                    let end = if start + size + header.len() + 1 >= length - 1 {
                         length - 1
                     } else {
                         start + size + header.len() + 1
@@ -281,33 +359,33 @@ impl Parser {
                     let temp = &data[start..end];
 
                     let (bytes_removed, _bytes) = remove_x265_injected_byte(&temp);
-                    let end = if end + bytes_removed > length {
+                    let end = if end + bytes_removed >= length - 1 {
                         length - 1
                     } else {
                         end + bytes_removed
                     };
 
                     let payload = data[start..end as usize].to_owned();
-                    if let Some(ref mut list) = final_list {
-                        list.push(payload);
-                    } else {
-                        return Ok(payload);
+                    *cur_byte += length;
+
+                    if *cur_byte >= 100_000_000 && pb.is_some() {
+                        let inc = (*cur_byte as f64 / 100_000_000.0).round() as u64;
+                        pb.unwrap().inc(inc);
+                        *cur_byte = 0;
                     }
+
+                    return Ok(payload);
                 }
             }
         }
-
-        if !metadata_detected && final_list.is_none() {
-            Err("File doesn't contain dynamic metadata, stopping.")
-        } else {
-            Ok(Vec::new())
-        }
+    
+        Err("File doesn't contain dynamic metadata, stopping.")
     }
 
     pub fn _test(&self) -> Option<(usize, Metadata)> {
         if let Ok(vec) = match self.format {
-            Format::Matroska => self.parse_matroska(),
-            _ => self.parse_raw_hevc(),
+            Format::Matroska => self.parse_matroska(None),
+            _ => self.parse_raw_hevc(None),
         } {
             let results = Parser::llc_parse_metadata(vec);
             Some((results.len(), results.first().cloned().unwrap()))
@@ -340,4 +418,14 @@ pub fn remove_x265_injected_byte(data: &[u8]) -> (usize, Vec<u8>) {
         .collect::<Vec<u8>>();
 
     (count, bytes)
+}
+
+impl std::fmt::Display for Format {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Format::Matroska => write!(f, "Matroska file"),
+            Format::Raw => write!(f, "HEVC file"),
+            Format::RawStdin => write!(f, "HEVC pipe"),
+        }
+    }
 }
