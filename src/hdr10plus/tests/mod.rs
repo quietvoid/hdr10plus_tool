@@ -1,2 +1,2 @@
-mod matroska_tests;
-mod raw_tests;
+mod matroska;
+mod raw;
