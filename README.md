@@ -24,7 +24,7 @@ options:
 * `--force-single-profile` Force only one metadata profile, avoiding mixing different profiles (fix for x265 segfault).
 
 
-### Piping with ffmpeg using Powershell is not supported.
+### Piping with ffmpeg using Powershell is not supported because of memory leaking issues.
     
 ## Sample files
 Tears of Steel samples encoded with x265 using `--dhdr10-info` for tests.
