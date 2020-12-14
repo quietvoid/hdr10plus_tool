@@ -4,7 +4,7 @@ on:
 name: Artifacts
 
 env:
-  RELEASE_BIN: dovi_tool
+  RELEASE_BIN: hdr10plus_parser
   RELEASE_DIR: artifacts
   WINDOWS_TARGET: x86_64-pc-windows-msvc
   MACOS_TARGET: x86_64-apple-darwin
