@@ -1,4 +1,4 @@
-# hdr10plus_parser
+# hdr10plus_parser [![Tests](https://github.com/quietvoid/hdr10plus_parser/workflows/Tests/badge.svg)](https://github.com/quietvoid/hdr10plus_parser/actions?query=workflow%3ATests) [![Artifacts](https://github.com/quietvoid/hdr10plus_parser/workflows/Artifacts/badge.svg)](https://github.com/quietvoid/hdr10plus_parser/actions?query=workflow%3AArtifacts)
 Tool to check if a HEVC file contains SMPTE 2094-40 metadata in SEI 
 messages.
 
