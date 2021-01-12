@@ -40,8 +40,10 @@ impl Parser {
 
         match self.parse_metadata() {
             Ok(vec) => {
-                //Match returned vec to check for --verify
-                if vec[0][0] == 1 && vec[0].len() == 1 {
+                if vec.is_empty() {
+                    println!("No metadata found in the input.");
+                } else if self.verify && vec[0][0] == 1 && vec[0].len() == 1 {
+                    //Match returned vec to check for --verify
                     println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
                 } else {
                     final_metadata = Self::llc_read_metadata(vec);
