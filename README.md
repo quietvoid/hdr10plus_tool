@@ -13,7 +13,7 @@ Version 1.3 of the specification released in September 2019 might not be support
 ## Usage, in CLI:
 
 * `hdr10plus_parser.exe "path/to/file.hevc" -o metadata.json`
-* `ffmpeg -i "input.mkv" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser.exe -o metadata.json -`
+* `ffmpeg -i "input.mkv" -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser.exe -o metadata.json -`
 * `cargo run -- "path/to/file.hevc" -o metadata.json`
 
 options:
