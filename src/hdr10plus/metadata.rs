@@ -2,6 +2,8 @@ use ansi_term::Colour::Yellow;
 use deku::prelude::*;
 use serde_json::{json, Value};
 
+use super::parser::MetadataFrame;
+
 const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
 const DISTRIBUTION_INDEXES_10: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
 
@@ -62,7 +64,11 @@ pub struct Metadata {
     #[deku(bits = "4", cond = "*tone_mapping_flag == 1")]
     pub num_bezier_curve_anchors: u8,
 
-    #[deku(count = "num_bezier_curve_anchors", bits = "10", cond = "*tone_mapping_flag == 1")]
+    #[deku(
+        count = "num_bezier_curve_anchors",
+        bits = "10",
+        cond = "*tone_mapping_flag == 1"
+    )]
     pub bezier_curve_anchors: Vec<u16>,
 
     #[deku(bits = "1")]
@@ -113,14 +119,18 @@ impl Metadata {
     }
 
     pub fn json_list(
-        list: &[Self],
+        list: &[MetadataFrame],
         force_single_profile: bool,
     ) -> (&str, Vec<Value>, Option<String>) {
         // Get highest number of anchors (should be constant across frames other than empty)
-        let num_bezier_curve_anchors = match list.iter().map(|m| m.bezier_curve_anchors.len()).max()
+        let num_bezier_curve_anchors = if let Some(max) = list
+            .iter()
+            .map(|m| m.metadata.bezier_curve_anchors.len())
+            .max()
         {
-            Some(max) => max,
-            None => 0,
+            max
+        } else {
+            0
         };
 
         // Use max with 0s instead of empty
@@ -131,6 +141,7 @@ impl Metadata {
 
         let metadata_json_array = list
             .iter()
+            .map(|mf| &mf.metadata)
             .map(|m| {
                 // Profile A, no bezier curve data
                 if m.targeted_system_display_maximum_luminance == 0 && m.bezier_curve_anchors.is_empty() && num_bezier_curve_anchors == 0 {

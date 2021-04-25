@@ -1,16 +1,16 @@
 [package]
 name = "hdr10plus_parser"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["quietvoid"]
 edition = "2018"
 license = "MIT"
 
 [dependencies]
 structopt = "0.3.21"
-serde = "1.0.118"
-serde_json = "1.0.60"
+serde = "1.0.125"
+serde_json = "1.0.64"
 indicatif = "0.15.0"
-read-byte-slice = "0.1.2"
-regex = "1.4.2"
+regex = "1.4.6"
 ansi_term = "0.12.1"
 deku = "0.9.2"
+hevc_parser = "0.1.0"
