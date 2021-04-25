@@ -289,7 +289,10 @@ impl Parser {
     }
 
     fn reorder_metadata(&self, frames: &[Frame], metadata: &mut Vec<MetadataFrame>) {
-        metadata.sort_by_key(|m| {
+        print!("{}", Blue.paint("Reordering metadata... "));
+        stdout().flush().ok();
+
+        metadata.sort_by_cached_key(|m| {
             let matching_index = frames
                 .iter()
                 .position(|f| m.decoded_index == f.decoded_number as usize)
@@ -302,6 +305,8 @@ impl Parser {
             .iter_mut()
             .enumerate()
             .for_each(|(idx, m)| m.presentation_number = idx);
+
+        println!("{}", Green.paint("Done."));
     }
 
     pub fn _test(&self) -> Option<Metadata> {
