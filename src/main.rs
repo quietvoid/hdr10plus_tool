@@ -1,9 +1,10 @@
 use regex::Regex;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 mod hdr10plus;
 use hdr10plus::parser::Parser;
+use hdr10plus::Format;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -47,7 +48,7 @@ struct Opt {
     force_single_profile: bool,
 }
 
-fn main() -> std::io::Result<()> {
+fn main() {
     let opt = Opt::from_args();
 
     let input = match opt.input {
@@ -60,41 +61,35 @@ fn main() -> std::io::Result<()> {
 
     let verify = opt.verify || opt.output.is_none();
 
-    match verify_input(&input) {
-        Ok(is_stdin) => {
-            let parser = Parser::new(
-                is_stdin,
-                input,
-                opt.output,
-                verify,
-                opt.force_single_profile,
-            );
-            parser.process_file();
+    match input_format(&input) {
+        Ok(format) => {
+            let parser = Parser::new(format, input, opt.output, verify, opt.force_single_profile);
+            parser.process_input();
         }
         Err(msg) => println!("{}", msg),
     }
-
-    Ok(())
 }
 
-fn verify_input(input: &PathBuf) -> Result<bool, String> {
-    let regex = Regex::new(r"\.(hevc|.?265)").unwrap();
+fn input_format(input: &Path) -> Result<Format, &str> {
+    let regex = Regex::new(r"\.(hevc|.?265|mkv)").unwrap();
     let file_name = match input.file_name() {
         Some(file_name) => file_name.to_str().unwrap(),
         None => "",
     };
 
     if file_name == "-" {
-        // is stdin
-        Ok(true)
+        Ok(Format::RawStdin)
     } else if regex.is_match(file_name) && input.is_file() {
-        // is file
-        Ok(false)
-    } else if file_name == "" {
-        Err(String::from("Missing input"))
+        if file_name.contains("mkv") {
+            Ok(Format::Matroska)
+        } else {
+            Ok(Format::Raw)
+        }
+    } else if file_name.is_empty() {
+        Err("Missing input.")
     } else if !input.is_file() {
-        Err(String::from("Input file doesn't exist."))
+        Err("Input file doesn't exist.")
     } else {
-        Err(String::from("Invalid input file type."))
+        Err("Invalid input file type.")
     }
 }
