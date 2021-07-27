@@ -4,6 +4,9 @@ use std::{fs::File, path::Path};
 pub mod metadata;
 pub mod parser;
 
+const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
+const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[cfg(test)]
 mod tests;
 

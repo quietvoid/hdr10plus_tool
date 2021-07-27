@@ -7,10 +7,10 @@ license = "MIT"
 
 [dependencies]
 structopt = "0.3.21"
-serde = "1.0.125"
+serde = "1.0.126"
 serde_json = "1.0.64"
-indicatif = "0.15.0"
-regex = "1.4.6"
+indicatif = "0.16.2"
+regex = "1.5.4"
 ansi_term = "0.12.1"
 deku = "0.9.2"
 hevc_parser = "0.1.4"
