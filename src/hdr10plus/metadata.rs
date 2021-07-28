@@ -139,7 +139,7 @@ impl Metadata {
 
         let mut profile = "A";
 
-        let metadata_json_array = list
+        let mut metadata_json_array = list
             .iter()
             .map(|mf| &mf.metadata)
             .map(|m| {
@@ -192,7 +192,56 @@ impl Metadata {
             })
             .collect::<Vec<Value>>();
 
+        compute_scene_information(profile, &mut metadata_json_array);
+
         (profile, metadata_json_array, warning)
+    }
+}
+
+fn compute_scene_information(profile: &str, metadata_json_array: &mut Vec<Value>) {
+    let mut scene_frame_index: u64 = 0;
+    let mut scene_id: u64 = 0;
+
+    for (sequence_frame_index, index) in (0..metadata_json_array.len()).enumerate() {
+        if index > 0 {
+            if let Some(metadata) = metadata_json_array[index].as_object() {
+                if let Some(prev_metadata) = metadata_json_array[index - 1].as_object() {
+                    // Can only be different if profile B
+                    let different_bezier = if profile == "B" {
+                        metadata.get("BezierCurveData") != prev_metadata.get("BezierCurveData")
+                    } else {
+                        false
+                    };
+
+                    let different_luminance = metadata.get("LuminanceParameters")
+                        != prev_metadata.get("LuminanceParameters");
+                    let different_windows =
+                        metadata.get("NumberOfWindows") != prev_metadata.get("NumberOfWindows");
+                    let different_target = metadata.get("TargetedSystemDisplayMaximumLuminance")
+                        != prev_metadata.get("TargetedSystemDisplayMaximumLuminance");
+
+                    if different_bezier
+                        || different_luminance
+                        || different_windows
+                        || different_target
+                    {
+                        scene_id += 1;
+                        scene_frame_index = 0;
+                    }
+                }
+            }
+        }
+
+        if let Some(map) = metadata_json_array[index].as_object_mut() {
+            map.insert("SceneFrameIndex".to_string(), json!(scene_frame_index));
+            map.insert("SceneId".to_string(), json!(scene_id));
+            map.insert(
+                "SequenceFrameIndex".to_string(),
+                json!(sequence_frame_index),
+            );
+        }
+
+        scene_frame_index += 1;
     }
 }
 

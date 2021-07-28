@@ -2,4 +2,11 @@
 /assets/*-sei.log
 /assets/*-meta.json
 **/*.rs.bk
-Cargo.lock
+/*.mkv
+/*.hevc
+/*.txt
+/*.vpy
+/*.bin
+/*.y4m
+/*.ffindex
+/*.json
