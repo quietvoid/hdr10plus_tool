@@ -196,7 +196,7 @@ checksum = "fed34cd105917e91daa4da6b3728c47b068749d6a62c59811f06ed2ac71d9da7"
 
 [[package]]
 name = "hdr10plus_parser"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "ansi_term 0.12.1",
  "deku",
