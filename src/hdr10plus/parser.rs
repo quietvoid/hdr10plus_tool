@@ -117,7 +117,7 @@ impl Parser {
 
         while let Ok(n) = reader.read(&mut main_buf) {
             let mut read_bytes = n;
-            if read_bytes == 0 {
+            if read_bytes == 0 && end.is_empty() && chunk.is_empty() {
                 break;
             }
 
@@ -184,6 +184,7 @@ impl Parser {
 
             if !end.is_empty() {
                 chunk.extend_from_slice(&end);
+                end.clear();
             }
 
             consumed += read_bytes;
@@ -223,7 +224,7 @@ impl Parser {
 
         //Loop over lines and read metadata, HDR10+ LLC format
         for (index, data) in input.iter().enumerate() {
-            let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(&data);
+            let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(data);
 
             // Parse metadata
             let (_rest, metadata) = Metadata::from_bytes((&bytes, 0)).unwrap();
@@ -250,7 +251,7 @@ impl Parser {
         force_single_profile: bool,
     ) -> (Value, Option<String>) {
         let (profile, frame_json_list, warning): (&str, Vec<Value>, Option<String>) =
-            Metadata::json_list(&metadata, force_single_profile);
+            Metadata::json_list(metadata, force_single_profile);
 
         let json_info = json!({
             "HDR10plusProfile": profile,
@@ -337,10 +338,16 @@ impl Parser {
         metadata.sort_by_cached_key(|m| {
             let matching_index = frames
                 .iter()
-                .position(|f| m.decoded_index == f.decoded_number as usize)
-                .unwrap();
+                .position(|f| m.decoded_index == f.decoded_number as usize);
 
-            frames[matching_index].presentation_number
+            if let Some(i) = matching_index {
+                frames[i].presentation_number
+            } else {
+                panic!(
+                    "Missing frame/slices for metadata! Decoded index {}",
+                    m.decoded_index
+                );
+            }
         });
 
         metadata
