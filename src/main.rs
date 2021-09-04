@@ -2,9 +2,12 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
+mod commands;
 mod hdr10plus;
-use hdr10plus::parser::Parser;
-use hdr10plus::Format;
+
+use commands::{extract, inject, Command};
+use extract::extract_json;
+use inject::Injector;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -12,6 +15,9 @@ use hdr10plus::Format;
     about = "Parses HDR10+ dynamic metadata in HEVC video files"
 )]
 struct Opt {
+    #[structopt(subcommand)]
+    cmd: Option<Command>,
+
     #[structopt(
         name = "input",
         short = "i",
@@ -19,6 +25,7 @@ struct Opt {
         help = "Sets the input file to use",
         long,
         conflicts_with = "stdin",
+        conflicts_with = "cmd",
         parse(from_os_str)
     )]
     input: Option<PathBuf>,
@@ -26,6 +33,7 @@ struct Opt {
     #[structopt(
         help = "Uses stdin as input data",
         conflicts_with = "input",
+        conflicts_with = "cmd",
         parse(from_os_str)
     )]
     stdin: Option<PathBuf>,
@@ -34,33 +42,46 @@ struct Opt {
         short = "o",
         long,
         help = "Sets the output JSON file to use",
+        conflicts_with = "cmd",
         parse(from_os_str)
     )]
     output: Option<PathBuf>,
 
     #[structopt(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
+
+    #[structopt(long, help = "Skip profile conformity validation")]
+    skip_validation: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Format {
+    Raw,
+    RawStdin,
+    Matroska,
 }
 
 fn main() {
     let opt = Opt::from_args();
 
-    let input = match opt.input {
-        Some(input) => input,
-        None => match opt.stdin {
-            Some(stdin) => stdin,
-            None => PathBuf::new(),
-        },
-    };
-
     let verify = opt.verify || opt.output.is_none();
+    let validate = !opt.skip_validation;
 
-    match input_format(&input) {
-        Ok(format) => {
-            let parser = Parser::new(format, input, opt.output, verify);
-            parser.process_input();
+    if let Some(cmd) = opt.cmd {
+        match cmd {
+            Command::Extract {
+                input,
+                stdin,
+                output,
+            } => extract_json(input, stdin, output, verify, validate),
+            Command::Inject {
+                input,
+                json_in,
+                output,
+            } => Injector::run(input, json_in, output, validate),
         }
-        Err(msg) => println!("{}", msg),
+    } else {
+        extract_json(opt.input, opt.stdin, opt.output, verify, validate);
     }
 }
 
@@ -85,5 +106,15 @@ fn input_format(input: &Path) -> Result<Format, &str> {
         Err("Input file doesn't exist.")
     } else {
         Err("Invalid input file type.")
+    }
+}
+
+impl std::fmt::Display for Format {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Format::Matroska => write!(f, "Matroska file"),
+            Format::Raw => write!(f, "HEVC file"),
+            Format::RawStdin => write!(f, "HEVC pipe"),
+        }
     }
 }

@@ -18,6 +18,7 @@ pub struct Parser {
     input: PathBuf,
     output: Option<PathBuf>,
     verify: bool,
+    validate: bool,
 }
 
 #[derive(Clone)]
@@ -28,12 +29,19 @@ pub struct MetadataFrame {
 }
 
 impl Parser {
-    pub fn new(format: Format, input: PathBuf, output: Option<PathBuf>, verify: bool) -> Self {
+    pub fn new(
+        format: Format,
+        input: PathBuf,
+        output: Option<PathBuf>,
+        verify: bool,
+        validate: bool,
+    ) -> Self {
         Self {
             format,
             input,
             output,
             verify,
+            validate,
         }
     }
 
@@ -43,7 +51,7 @@ impl Parser {
         let mut parser = HevcParser::default();
 
         let result = match self.format {
-            Format::Matroska => panic!("unsupported"),
+            Format::Matroska => panic!("unsupported format matroska"),
             _ => self.parse_metadata(&self.input, Some(&pb), &mut parser),
         };
 
@@ -57,7 +65,7 @@ impl Parser {
                     //Match returned vec to check for --verify
                     println!("Dynamic HDR10+ metadata detected.");
                 } else {
-                    let mut final_metadata = Self::llc_read_metadata(vec, true);
+                    let mut final_metadata = Self::llc_read_metadata(vec, self.validate);
 
                     //Sucessful parse & no --verify
                     if !final_metadata.is_empty() {

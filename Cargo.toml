@@ -1,6 +1,6 @@
 [package]
-name = "hdr10plus_parser"
-version = "0.5.1"
+name = "hdr10plus_tool"
+version = "1.0.0"
 authors = ["quietvoid"]
 edition = "2018"
 license = "MIT"
@@ -13,4 +13,5 @@ indicatif = "0.16.2"
 regex = "1.5.4"
 bitvec = "0.20.4"
 bitvec_helpers = "0.1.0"
-hevc_parser = "0.1.7"
+hevc_parser = "0.2.0"
+rayon = "1.5.0"

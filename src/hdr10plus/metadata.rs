@@ -1,7 +1,8 @@
-use bitvec_helpers::bitvec_reader::BitVecReader;
+use bitvec_helpers::{bitvec_reader::BitVecReader, bitvec_writer::BitVecWriter};
+use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
 use serde_json::{json, Value};
 
-use super::parser::MetadataFrame;
+use super::{metadata_json, parser::MetadataFrame};
 
 const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
 const DISTRIBUTION_INDEXES_10: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
@@ -266,6 +267,94 @@ impl Hdr10PlusMetadata {
 
         self.profile = profile.to_string();
     }
+
+    pub fn encode(&self) -> Vec<u8> {
+        // Write NALU SEI_PREFIX header
+        let mut header_writer = BitVecWriter::new();
+
+        header_writer.write(false); // forbidden_zero_bit
+        header_writer.write_n(&hevc::NAL_SEI_PREFIX.to_be_bytes(), 6); // nal_type
+        header_writer.write_n(&(0_u8).to_be_bytes(), 6); // nuh_layer_id
+        header_writer.write_n(&(1_u8).to_be_bytes(), 3); // temporal_id
+
+        header_writer.write_n(&hevc::USER_DATA_REGISTERED_ITU_T_35.to_be_bytes(), 8);
+
+        let mut writer = BitVecWriter::new();
+
+        writer.write_n(&self.itu_t_t35_country_code.to_be_bytes(), 8);
+        writer.write_n(&self.itu_t_t35_terminal_provider_code.to_be_bytes(), 16);
+        writer.write_n(
+            &self.itu_t_t35_terminal_provider_oriented_code.to_be_bytes(),
+            16,
+        );
+        writer.write_n(&self.application_identifier.to_be_bytes(), 8);
+        writer.write_n(&self.application_version.to_be_bytes(), 8);
+        writer.write_n(&self.num_windows.to_be_bytes(), 2);
+
+        if let Some(pws) = &self.processing_windows {
+            pws.iter().for_each(|pw| pw.encode(&mut writer));
+        }
+
+        writer.write_n(
+            &self.targeted_system_display_maximum_luminance.to_be_bytes(),
+            27,
+        );
+
+        writer.write(self.targeted_system_display_actual_peak_luminance_flag);
+        if let Some(atsd) = &self.actual_targeted_system_display {
+            atsd.encode(&mut writer);
+        }
+
+        for _ in 0..self.num_windows {
+            self.maxscl
+                .iter()
+                .for_each(|e| writer.write_n(&e.to_be_bytes(), 17));
+
+            writer.write_n(&self.average_maxrgb.to_be_bytes(), 17);
+
+            writer.write_n(&self.num_distribution_maxrgb_percentiles.to_be_bytes(), 4);
+
+            self.distribution_maxrgb
+                .iter()
+                .for_each(|e| e.encode(&mut writer));
+
+            writer.write_n(&self.fraction_bright_pixels.to_be_bytes(), 10);
+        }
+
+        writer.write(self.mastering_display_actual_peak_luminance_flag);
+
+        if let Some(amd) = &self.actual_mastering_display {
+            amd.encode(&mut writer);
+        }
+
+        for _ in 0..self.num_windows {
+            writer.write(self.tone_mapping_flag);
+
+            if let Some(bc) = &self.bezier_curve {
+                bc.encode(&mut writer);
+            }
+        }
+
+        writer.write(self.color_saturation_mapping_flag);
+        if self.color_saturation_mapping_flag {
+            writer.write_n(&self.color_saturation_weight.to_be_bytes(), 6);
+        }
+
+        let mut payload = writer.as_slice().to_vec();
+
+        // FIXME: This should probably be 1024 but not sure how to write a longer header
+        assert!(payload.len() <= 255);
+        header_writer.write_n(&payload.len().to_be_bytes(), 8);
+
+        payload.push(0x80);
+
+        let mut data = header_writer.as_slice().to_vec();
+        data.append(&mut payload);
+
+        add_start_code_emulation_prevention_3_byte(&mut data);
+
+        data
+    }
 }
 
 fn compute_scene_information(profile: &str, metadata_json_array: &mut Vec<Value>) {
@@ -358,6 +447,11 @@ impl DistributionMaxRgb {
             .iter()
             .for_each(|&v| assert!(v <= 100_000));
     }
+
+    pub fn encode(&self, writer: &mut BitVecWriter) {
+        writer.write_n(&self.percentage.to_be_bytes(), 7);
+        writer.write_n(&self.percentile.to_be_bytes(), 17);
+    }
 }
 
 impl ProcessingWindow {
@@ -375,6 +469,20 @@ impl ProcessingWindow {
             semiminor_axis_external_ellipse: reader.get_n(16),
             overlap_process_option: reader.get(),
         }
+    }
+
+    pub fn encode(&self, writer: &mut BitVecWriter) {
+        writer.write_n(&self.window_upper_left_corner_x.to_be_bytes(), 16);
+        writer.write_n(&self.window_upper_left_corner_y.to_be_bytes(), 16);
+        writer.write_n(&self.window_lower_right_corner_x.to_be_bytes(), 16);
+        writer.write_n(&self.window_lower_right_corner_y.to_be_bytes(), 16);
+        writer.write_n(&self.center_of_ellipse_x.to_be_bytes(), 16);
+        writer.write_n(&self.center_of_ellipse_y.to_be_bytes(), 16);
+        writer.write_n(&self.rotation_angle.to_be_bytes(), 8);
+        writer.write_n(&self.semimajor_axis_internal_ellipse.to_be_bytes(), 16);
+        writer.write_n(&self.semimajor_axis_external_ellipse.to_be_bytes(), 16);
+        writer.write_n(&self.semimajor_axis_external_ellipse.to_be_bytes(), 16);
+        writer.write(self.overlap_process_option);
     }
 }
 
@@ -399,6 +507,30 @@ impl ActualTargetedSystemDisplay {
 
         atsd
     }
+
+    pub fn encode(&self, writer: &mut BitVecWriter) {
+        writer.write_n(
+            &self
+                .num_rows_targeted_system_display_actual_peak_luminance
+                .to_be_bytes(),
+            5,
+        );
+        writer.write_n(
+            &self
+                .num_cols_targeted_system_display_actual_peak_luminance
+                .to_be_bytes(),
+            5,
+        );
+
+        for i in 0..self.num_rows_targeted_system_display_actual_peak_luminance as usize {
+            for j in 0..self.num_cols_targeted_system_display_actual_peak_luminance as usize {
+                writer.write_n(
+                    &self.targeted_system_display_actual_peak_luminance[i][j].to_be_bytes(),
+                    4,
+                );
+            }
+        }
+    }
 }
 
 impl ActualMasteringDisplay {
@@ -421,6 +553,30 @@ impl ActualMasteringDisplay {
         }
 
         amd
+    }
+
+    pub fn encode(&self, writer: &mut BitVecWriter) {
+        writer.write_n(
+            &self
+                .num_rows_mastering_display_actual_peak_luminance
+                .to_be_bytes(),
+            5,
+        );
+        writer.write_n(
+            &self
+                .num_cols_mastering_display_actual_peak_luminanc
+                .to_be_bytes(),
+            5,
+        );
+
+        for i in 0..self.num_rows_mastering_display_actual_peak_luminance as usize {
+            for j in 0..self.num_cols_mastering_display_actual_peak_luminanc as usize {
+                writer.write_n(
+                    &self.mastering_display_actual_peak_luminance[i][j].to_be_bytes(),
+                    4,
+                );
+            }
+        }
     }
 }
 
@@ -463,5 +619,83 @@ impl BezierCurve {
             "KneePointX": self.knee_point_x,
             "KneePointY": self.knee_point_y
         })
+    }
+
+    pub fn encode(&self, writer: &mut BitVecWriter) {
+        writer.write_n(&self.knee_point_x.to_be_bytes(), 12);
+        writer.write_n(&self.knee_point_y.to_be_bytes(), 12);
+        writer.write_n(&self.num_bezier_curve_anchors.to_be_bytes(), 4);
+
+        self.bezier_curve_anchors
+            .iter()
+            .for_each(|e| writer.write_n(&e.to_be_bytes(), 10));
+    }
+}
+
+impl From<&metadata_json::Hdr10PlusJsonMetadata> for Hdr10PlusMetadata {
+    fn from(jm: &metadata_json::Hdr10PlusJsonMetadata) -> Self {
+        let lp = &jm.luminance_parameters;
+        let dists = &lp.luminance_distributions;
+
+        assert!(lp.max_scl.len() == 3);
+        let maxscl = [lp.max_scl[0], lp.max_scl[1], lp.max_scl[2]];
+
+        assert!(dists.distribution_index.len() == dists.distribution_values.len());
+        assert!(dists.distribution_index.len() <= 10);
+        assert!(dists.distribution_values.len() <= 10);
+
+        let distribution_parsed = dists
+            .distribution_index
+            .iter()
+            .zip(dists.distribution_values.iter())
+            .map(|(percentage, percentile)| DistributionMaxRgb {
+                percentage: *percentage,
+                percentile: *percentile,
+            })
+            .collect();
+
+        let tone_mapping_flag = jm.bezier_curve_data.is_some();
+
+        let bezier_curve = if let Some(bcd) = &jm.bezier_curve_data {
+            let bc = BezierCurve {
+                knee_point_x: bcd.knee_point_x,
+                knee_point_y: bcd.knee_point_y,
+                num_bezier_curve_anchors: bcd.anchors.len() as u8,
+                bezier_curve_anchors: bcd.anchors.clone(),
+            };
+
+            Some(bc)
+        } else {
+            None
+        };
+
+        let mut meta = Self {
+            itu_t_t35_country_code: 0xB5,
+            itu_t_t35_terminal_provider_code: 0x3C,
+            itu_t_t35_terminal_provider_oriented_code: 1,
+            application_identifier: 4,
+            application_version: 1,
+            num_windows: jm.number_of_windows,
+            processing_windows: None,
+            targeted_system_display_maximum_luminance: jm.targeted_system_display_maximum_luminance,
+            targeted_system_display_actual_peak_luminance_flag: false,
+            actual_targeted_system_display: None,
+            maxscl,
+            average_maxrgb: lp.average_rgb,
+            num_distribution_maxrgb_percentiles: dists.distribution_index.len() as u8,
+            distribution_maxrgb: distribution_parsed,
+            fraction_bright_pixels: 0,
+            mastering_display_actual_peak_luminance_flag: false,
+            actual_mastering_display: None,
+            tone_mapping_flag,
+            bezier_curve,
+            color_saturation_mapping_flag: false,
+            color_saturation_weight: 0,
+            ..Default::default()
+        };
+
+        meta.set_profile();
+
+        meta
     }
 }
