@@ -40,12 +40,6 @@ struct Opt {
 
     #[structopt(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
-
-    #[structopt(
-        long,
-        help = "Force only one metadata profile, avoiding mixing different profiles (fix for x265 segfault)"
-    )]
-    force_single_profile: bool,
 }
 
 fn main() {
@@ -63,7 +57,7 @@ fn main() {
 
     match input_format(&input) {
         Ok(format) => {
-            let parser = Parser::new(format, input, opt.output, verify, opt.force_single_profile);
+            let parser = Parser::new(format, input, opt.output, verify);
             parser.process_input();
         }
         Err(msg) => println!("{}", msg),
@@ -80,7 +74,7 @@ fn input_format(input: &Path) -> Result<Format, &str> {
     if file_name == "-" {
         Ok(Format::RawStdin)
     } else if regex.is_match(file_name) && input.is_file() {
-        if file_name.contains("mkv") {
+        if file_name.ends_with(".mkv") {
             Ok(Format::Matroska)
         } else {
             Ok(Format::Raw)
