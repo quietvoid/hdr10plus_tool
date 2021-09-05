@@ -1,72 +1,54 @@
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use structopt::StructOpt;
 
+mod commands;
 mod hdr10plus;
-use hdr10plus::parser::Parser;
-use hdr10plus::Format;
+
+use commands::{extract, inject, Command};
+use extract::extract_json;
+use inject::Injector;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "hdr10plus_parser",
+    name = "hdr10plus_tool",
     about = "Parses HDR10+ dynamic metadata in HEVC video files"
 )]
 struct Opt {
-    #[structopt(
-        name = "input",
-        short = "i",
-        long,
-        help = "Sets the input file to use",
-        long,
-        conflicts_with = "stdin",
-        parse(from_os_str)
-    )]
-    input: Option<PathBuf>,
-
-    #[structopt(
-        help = "Uses stdin as input data",
-        conflicts_with = "input",
-        parse(from_os_str)
-    )]
-    stdin: Option<PathBuf>,
-
-    #[structopt(
-        short = "o",
-        long,
-        help = "Sets the output JSON file to use",
-        parse(from_os_str)
-    )]
-    output: Option<PathBuf>,
+    #[structopt(subcommand)]
+    cmd: Command,
 
     #[structopt(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
 
-    #[structopt(
-        long,
-        help = "Force only one metadata profile, avoiding mixing different profiles (fix for x265 segfault)"
-    )]
-    force_single_profile: bool,
+    #[structopt(long, help = "Skip profile conformity validation")]
+    skip_validation: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Format {
+    Raw,
+    RawStdin,
+    Matroska,
 }
 
 fn main() {
     let opt = Opt::from_args();
 
-    let input = match opt.input {
-        Some(input) => input,
-        None => match opt.stdin {
-            Some(stdin) => stdin,
-            None => PathBuf::new(),
-        },
-    };
+    let verify = opt.verify;
+    let validate = !opt.skip_validation;
 
-    let verify = opt.verify || opt.output.is_none();
-
-    match input_format(&input) {
-        Ok(format) => {
-            let parser = Parser::new(format, input, opt.output, verify, opt.force_single_profile);
-            parser.process_input();
-        }
-        Err(msg) => println!("{}", msg),
+    match opt.cmd {
+        Command::Extract {
+            input,
+            stdin,
+            output,
+        } => extract_json(input, stdin, output, verify, validate),
+        Command::Inject {
+            input,
+            json_in,
+            output,
+        } => Injector::run(input, json_in, output, validate),
     }
 }
 
@@ -80,7 +62,7 @@ fn input_format(input: &Path) -> Result<Format, &str> {
     if file_name == "-" {
         Ok(Format::RawStdin)
     } else if regex.is_match(file_name) && input.is_file() {
-        if file_name.contains("mkv") {
+        if file_name.ends_with(".mkv") {
             Ok(Format::Matroska)
         } else {
             Ok(Format::Raw)
@@ -91,5 +73,15 @@ fn input_format(input: &Path) -> Result<Format, &str> {
         Err("Input file doesn't exist.")
     } else {
         Err("Invalid input file type.")
+    }
+}
+
+impl std::fmt::Display for Format {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Format::Matroska => write!(f, "Matroska file"),
+            Format::Raw => write!(f, "HEVC file"),
+            Format::RawStdin => write!(f, "HEVC pipe"),
+        }
     }
 }

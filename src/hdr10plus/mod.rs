@@ -1,7 +1,10 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{fs::File, path::Path};
 
+use super::Format;
+
 pub mod metadata;
+pub mod metadata_json;
 pub mod parser;
 
 const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
@@ -9,13 +12,6 @@ const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Debug, PartialEq)]
-pub enum Format {
-    Raw,
-    RawStdin,
-    Matroska,
-}
 
 #[derive(Debug)]
 pub struct RpuOptions {
@@ -43,14 +39,4 @@ pub fn initialize_progress_bar(format: &Format, input: &Path) -> ProgressBar {
     }
 
     pb
-}
-
-impl std::fmt::Display for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Format::Matroska => write!(f, "Matroska file"),
-            Format::Raw => write!(f, "HEVC file"),
-            Format::RawStdin => write!(f, "HEVC pipe"),
-        }
-    }
 }

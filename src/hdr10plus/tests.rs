@@ -47,10 +47,11 @@ fn sample01() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 1037);
-    assert_eq!(metadata.maxscl, vec![17830, 16895, 14252]);
+    assert_eq!(metadata.maxscl, [17830, 16895, 14252]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -59,10 +60,14 @@ fn sample01() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![3, 14024, 43, 56, 219, 1036, 2714, 4668, 14445]
     );
-    assert_eq!(metadata.knee_point_x, 17);
-    assert_eq!(metadata.knee_point_y, 64);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 17);
+    assert_eq!(bc.knee_point_y, 64);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![265, 666, 741, 800, 848, 887, 920, 945, 957]
     );
 }
@@ -74,10 +79,11 @@ fn sample02() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -86,10 +92,14 @@ fn sample02() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![3, 14024, 43, 56, 219, 1036, 2714, 4668, 14445]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![265, 666, 741, 800, 848, 887, 920, 945, 957]
     );
 }
@@ -101,10 +111,11 @@ fn sample03() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![0, 1, 0]);
+    assert_eq!(metadata.maxscl, [0, 1, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -113,10 +124,14 @@ fn sample03() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![3, 14024, 43, 56, 219, 1036, 2714, 4668, 14445]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![265, 666, 741, 800, 848, 887, 920, 945, 957]
     );
 }
@@ -128,10 +143,11 @@ fn sample04() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10);
     assert_eq!(metadata.average_maxrgb, 1);
-    assert_eq!(metadata.maxscl, vec![0, 1, 0]);
+    assert_eq!(metadata.maxscl, [0, 1, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -140,10 +156,14 @@ fn sample04() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 14024, 43, 56, 219, 0, 2714, 4668, 14445]
     );
-    assert_eq!(metadata.knee_point_x, 1);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 1);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![0, 666, 741, 0, 848, 887, 920, 945, 957]
     );
 }
@@ -155,10 +175,11 @@ fn sample05() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 500);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -167,10 +188,14 @@ fn sample05() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 3, 4, 5, 6, 7, 8]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -182,10 +207,11 @@ fn sample06() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 500);
     assert_eq!(metadata.average_maxrgb, 1);
-    assert_eq!(metadata.maxscl, vec![1, 3, 6]);
+    assert_eq!(metadata.maxscl, [1, 3, 6]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -194,10 +220,14 @@ fn sample06() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 3, 4, 5, 6, 7, 8]
     );
-    assert_eq!(metadata.knee_point_x, 2048);
-    assert_eq!(metadata.knee_point_y, 85);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 2048);
+    assert_eq!(bc.knee_point_y, 85);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -209,10 +239,11 @@ fn sample07() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![3790, 5508, 3584]);
+    assert_eq!(metadata.maxscl, [3790, 5508, 3584]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -221,10 +252,14 @@ fn sample07() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -236,10 +271,11 @@ fn sample08() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 3);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -248,10 +284,14 @@ fn sample08() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -263,10 +303,11 @@ fn sample09() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 3);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -275,10 +316,14 @@ fn sample09() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -289,10 +334,11 @@ fn sample10() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 13);
-    assert_eq!(metadata.maxscl, vec![1, 3, 6]);
+    assert_eq!(metadata.maxscl, [1, 3, 6]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -301,10 +347,14 @@ fn sample10() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 1);
-    assert_eq!(metadata.knee_point_y, 1);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 1);
+    assert_eq!(bc.knee_point_y, 1);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -315,10 +365,11 @@ fn sample11() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![69700, 67280, 89012]);
+    assert_eq!(metadata.maxscl, [69700, 67280, 89012]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -327,10 +378,14 @@ fn sample11() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -341,10 +396,11 @@ fn sample12() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -353,10 +409,14 @@ fn sample12() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -367,10 +427,11 @@ fn sample13() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 78023);
-    assert_eq!(metadata.maxscl, vec![69700, 67280, 89012]);
+    assert_eq!(metadata.maxscl, [69700, 67280, 89012]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -379,10 +440,14 @@ fn sample13() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 2305);
-    assert_eq!(metadata.knee_point_y, 1203);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 2305);
+    assert_eq!(bc.knee_point_y, 1203);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -393,10 +458,11 @@ fn sample14() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 9998);
     assert_eq!(metadata.average_maxrgb, 78023);
-    assert_eq!(metadata.maxscl, vec![69700, 67280, 89012]);
+    assert_eq!(metadata.maxscl, [69700, 67280, 89012]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -405,10 +471,14 @@ fn sample14() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 572, 100, 1, 1, 2, 12, 35, 491]
     );
-    assert_eq!(metadata.knee_point_x, 2305);
-    assert_eq!(metadata.knee_point_y, 1203);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 2305);
+    assert_eq!(bc.knee_point_y, 1203);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -419,10 +489,11 @@ fn sample15() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 9998);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -431,9 +502,13 @@ fn sample15() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -442,10 +517,11 @@ fn sample16() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 1);
-    assert_eq!(metadata.maxscl, vec![450, 26, 0]);
+    assert_eq!(metadata.maxscl, [450, 26, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -454,10 +530,14 @@ fn sample16() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 9791, 100, 0, 1, 9, 32, 56, 9740]
     );
-    assert_eq!(metadata.knee_point_x, 35);
-    assert_eq!(metadata.knee_point_y, 86);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 35);
+    assert_eq!(bc.knee_point_y, 86);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![203, 411, 624, 721, 773, 821, 875, 924, 953]
     );
 }
@@ -468,10 +548,11 @@ fn sample17() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 11);
-    assert_eq!(metadata.maxscl, vec![0, 0, 3584]);
+    assert_eq!(metadata.maxscl, [0, 0, 3584]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -480,10 +561,14 @@ fn sample17() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 9791, 100, 0, 1, 9, 32, 56, 9740]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -494,10 +579,11 @@ fn sample18() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 3584);
-    assert_eq!(metadata.maxscl, vec![0, 0, 8]);
+    assert_eq!(metadata.maxscl, [0, 0, 8]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -506,10 +592,14 @@ fn sample18() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 9791, 100, 0, 1, 9, 32, 56, 9740]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -520,10 +610,11 @@ fn sample19() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 4096);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![4096, 8192, 16384]);
+    assert_eq!(metadata.maxscl, [4096, 8192, 16384]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -532,10 +623,14 @@ fn sample19() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 9791, 100, 0, 1, 9, 32, 56, 9740]
     );
-    assert_eq!(metadata.knee_point_x, 3823);
-    assert_eq!(metadata.knee_point_y, 1490);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 3823);
+    assert_eq!(bc.knee_point_y, 1490);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -546,10 +641,11 @@ fn sample20() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 5582, 0]);
+    assert_eq!(metadata.maxscl, [0, 5582, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -558,9 +654,13 @@ fn sample20() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -569,10 +669,11 @@ fn sample21() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 9);
-    assert_eq!(metadata.maxscl, vec![0, 0, 3584]);
+    assert_eq!(metadata.maxscl, [0, 0, 3584]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -581,9 +682,13 @@ fn sample21() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -592,10 +697,11 @@ fn sample22() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![7, 0, 3584]);
+    assert_eq!(metadata.maxscl, [7, 0, 3584]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -604,9 +710,13 @@ fn sample22() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -615,10 +725,11 @@ fn sample23() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![1, 0, 6]);
+    assert_eq!(metadata.maxscl, [1, 0, 6]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -627,9 +738,13 @@ fn sample23() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -638,10 +753,11 @@ fn sample24() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 1);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![0, 5582, 0]);
+    assert_eq!(metadata.maxscl, [0, 5582, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -650,9 +766,13 @@ fn sample24() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -661,10 +781,11 @@ fn sample25() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![3584, 0, 3584]);
+    assert_eq!(metadata.maxscl, [3584, 0, 3584]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -673,9 +794,13 @@ fn sample25() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -684,10 +809,11 @@ fn sample26() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 100000);
-    assert_eq!(metadata.maxscl, vec![2048, 2048, 0]);
+    assert_eq!(metadata.maxscl, [2048, 2048, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -696,9 +822,13 @@ fn sample26() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -707,10 +837,11 @@ fn sample27() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![2048, 2048, 0]);
+    assert_eq!(metadata.maxscl, [2048, 2048, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -719,9 +850,13 @@ fn sample27() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -730,10 +865,11 @@ fn sample28() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![2048, 2048, 2048]);
+    assert_eq!(metadata.maxscl, [2048, 2048, 2048]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -742,9 +878,13 @@ fn sample28() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -753,10 +893,11 @@ fn sample29() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![2049, 0, 0]);
+    assert_eq!(metadata.maxscl, [2049, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -765,9 +906,13 @@ fn sample29() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -776,10 +921,11 @@ fn sample30() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![12, 3, 0]);
+    assert_eq!(metadata.maxscl, [12, 3, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -788,9 +934,13 @@ fn sample30() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -799,10 +949,11 @@ fn sample31() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![1, 0, 0]);
+    assert_eq!(metadata.maxscl, [1, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -811,9 +962,13 @@ fn sample31() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -822,10 +977,11 @@ fn sample32() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 11);
-    assert_eq!(metadata.maxscl, vec![1152, 2, 0]);
+    assert_eq!(metadata.maxscl, [1152, 2, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -834,9 +990,13 @@ fn sample32() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -845,10 +1005,11 @@ fn sample33() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![32768, 0, 0]);
+    assert_eq!(metadata.maxscl, [32768, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -857,9 +1018,13 @@ fn sample33() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -868,10 +1033,11 @@ fn sample34() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![1, 2304, 0]);
+    assert_eq!(metadata.maxscl, [1, 2304, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -880,9 +1046,13 @@ fn sample34() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -891,10 +1061,11 @@ fn sample35() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 11);
-    assert_eq!(metadata.maxscl, vec![158, 1, 1]);
+    assert_eq!(metadata.maxscl, [158, 1, 1]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -903,9 +1074,13 @@ fn sample35() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -914,10 +1089,11 @@ fn sample36() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 11);
-    assert_eq!(metadata.maxscl, vec![4096, 0, 0]);
+    assert_eq!(metadata.maxscl, [4096, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -926,9 +1102,13 @@ fn sample36() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -937,10 +1117,11 @@ fn sample37() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -949,9 +1130,13 @@ fn sample37() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -960,10 +1145,11 @@ fn sample38() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![0, 2048, 0]);
+    assert_eq!(metadata.maxscl, [0, 2048, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -972,9 +1158,13 @@ fn sample38() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -983,10 +1173,11 @@ fn sample39() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![0, 98304, 98304]);
+    assert_eq!(metadata.maxscl, [0, 98304, 98304]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -995,9 +1186,13 @@ fn sample39() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1006,10 +1201,11 @@ fn sample40() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![0, 70000, 0]);
+    assert_eq!(metadata.maxscl, [0, 70000, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1018,9 +1214,13 @@ fn sample40() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1029,10 +1229,11 @@ fn sample41() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 1);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![32768, 98304, 0]);
+    assert_eq!(metadata.maxscl, [32768, 98304, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1041,9 +1242,13 @@ fn sample41() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1052,10 +1257,11 @@ fn sample42() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![98304, 98304, 0]);
+    assert_eq!(metadata.maxscl, [98304, 98304, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1064,9 +1270,13 @@ fn sample42() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1075,10 +1285,11 @@ fn sample43() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 1);
     assert_eq!(metadata.average_maxrgb, 1024);
-    assert_eq!(metadata.maxscl, vec![65536, 0, 0]);
+    assert_eq!(metadata.maxscl, [65536, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1087,9 +1298,13 @@ fn sample43() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1098,10 +1313,11 @@ fn sample44() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 65535);
-    assert_eq!(metadata.maxscl, vec![0, 4097, 0]);
+    assert_eq!(metadata.maxscl, [0, 4097, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1110,9 +1326,13 @@ fn sample44() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1121,10 +1341,11 @@ fn sample45() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 4096);
     assert_eq!(metadata.average_maxrgb, 1);
-    assert_eq!(metadata.maxscl, vec![0, 65536, 0]);
+    assert_eq!(metadata.maxscl, [0, 65536, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1133,9 +1354,13 @@ fn sample45() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1144,10 +1369,11 @@ fn sample46() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 4096);
     assert_eq!(metadata.average_maxrgb, 65536);
-    assert_eq!(metadata.maxscl, vec![0, 65536, 0]);
+    assert_eq!(metadata.maxscl, [0, 65536, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1156,9 +1382,13 @@ fn sample46() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1167,10 +1397,11 @@ fn sample47() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 65536);
-    assert_eq!(metadata.maxscl, vec![32768, 0, 0]);
+    assert_eq!(metadata.maxscl, [32768, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1179,9 +1410,13 @@ fn sample47() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1190,10 +1425,11 @@ fn sample48() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 65536);
-    assert_eq!(metadata.maxscl, vec![0, 65536, 0]);
+    assert_eq!(metadata.maxscl, [0, 65536, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1202,9 +1438,13 @@ fn sample48() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1213,10 +1453,11 @@ fn sample49() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 12);
-    assert_eq!(metadata.maxscl, vec![99000, 98304, 0]);
+    assert_eq!(metadata.maxscl, [99000, 98304, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1225,9 +1466,13 @@ fn sample49() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1236,10 +1481,11 @@ fn sample50() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 8192);
     assert_eq!(metadata.average_maxrgb, 99999);
-    assert_eq!(metadata.maxscl, vec![99000, 98304, 0]);
+    assert_eq!(metadata.maxscl, [99000, 98304, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1248,9 +1494,13 @@ fn sample50() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1259,10 +1509,11 @@ fn sample51() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 32847);
-    assert_eq!(metadata.maxscl, vec![32768, 32768, 0]);
+    assert_eq!(metadata.maxscl, [32768, 32768, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1271,9 +1522,13 @@ fn sample51() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1282,10 +1537,11 @@ fn sample52() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1294,9 +1550,13 @@ fn sample52() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1305,10 +1565,11 @@ fn sample53() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 100000);
-    assert_eq!(metadata.maxscl, vec![0, 99999, 0]);
+    assert_eq!(metadata.maxscl, [0, 99999, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1317,9 +1578,13 @@ fn sample53() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1328,10 +1593,11 @@ fn sample54() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 100000);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1340,9 +1606,13 @@ fn sample54() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, Vec::<u16>::new());
 }
 
 #[test]
@@ -1351,10 +1621,11 @@ fn sample55() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 350);
     assert_eq!(metadata.average_maxrgb, 1);
-    assert_eq!(metadata.maxscl, vec![4425, 3984, 3292]);
+    assert_eq!(metadata.maxscl, [4425, 3984, 3292]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
@@ -1363,9 +1634,13 @@ fn sample55() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 0, 0, 0, 0, 0, 1, 5, 2756]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, vec![256, 512, 767]);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, vec![256, 512, 767]);
 }
 
 #[test]
@@ -1374,10 +1649,11 @@ fn sample56() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 350);
     assert_eq!(metadata.average_maxrgb, 1);
-    assert_eq!(metadata.maxscl, vec![0, 65536, 0]);
+    assert_eq!(metadata.maxscl, [0, 65536, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
@@ -1386,9 +1662,13 @@ fn sample56() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 0, 0, 0, 0, 0, 1, 5, 2756]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, vec![256, 512, 767]);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, vec![256, 512, 767]);
 }
 
 #[test]
@@ -1397,10 +1677,11 @@ fn sample57() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 9998);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1409,9 +1690,13 @@ fn sample57() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, vec![0, 0, 0]);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(bc.bezier_curve_anchors, vec![0, 0, 0]);
 }
 
 #[test]
@@ -1420,10 +1705,11 @@ fn sample58() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 100000);
-    assert_eq!(metadata.maxscl, vec![100000, 100000, 100000]);
+    assert_eq!(metadata.maxscl, [100000, 100000, 100000]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
@@ -1432,10 +1718,14 @@ fn sample58() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000]
     );
-    assert_eq!(metadata.knee_point_x, 4095);
-    assert_eq!(metadata.knee_point_y, 4095);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 4095);
+    assert_eq!(bc.knee_point_y, 4095);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023]
     );
 }
@@ -1446,10 +1736,11 @@ fn sample59() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 10000);
     assert_eq!(metadata.average_maxrgb, 100000);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
@@ -1458,10 +1749,14 @@ fn sample59() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000]
     );
-    assert_eq!(metadata.knee_point_x, 4095);
-    assert_eq!(metadata.knee_point_y, 4095);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 4095);
+    assert_eq!(bc.knee_point_y, 4095);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023]
     );
 }
@@ -1472,10 +1767,11 @@ fn sample60() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, _) = parser._test().unwrap();
 
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 0);
-    assert_eq!(metadata.maxscl, vec![0, 0, 0]);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1484,10 +1780,14 @@ fn sample60() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
     );
 }
@@ -1498,10 +1798,13 @@ fn sample61() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, json) = parser._test().unwrap();
 
+    metadata.validate();
+
+    assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
     assert_eq!(metadata.average_maxrgb, 1037);
-    assert_eq!(metadata.maxscl, vec![17830, 16895, 14252]);
+    assert_eq!(metadata.maxscl, [17830, 16895, 14252]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1510,10 +1813,14 @@ fn sample61() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![3, 14024, 43, 56, 219, 1036, 2714, 4668, 14445]
     );
-    assert_eq!(metadata.knee_point_x, 17);
-    assert_eq!(metadata.knee_point_y, 64);
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 17);
+    assert_eq!(bc.knee_point_y, 64);
     assert_eq!(
-        metadata.bezier_curve_anchors,
+        bc.bezier_curve_anchors,
         vec![265, 666, 741, 800, 848, 887, 920, 945, 957]
     );
 
@@ -1542,10 +1849,13 @@ fn sample62() {
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
     let (metadata, json) = parser._test().unwrap();
 
+    metadata.validate();
+
+    assert_eq!(metadata.profile, "A");
     assert_eq!(metadata.num_windows, 1);
     assert_eq!(metadata.targeted_system_display_maximum_luminance, 0);
     assert_eq!(metadata.average_maxrgb, 1037);
-    assert_eq!(metadata.maxscl, vec![17830, 16895, 14252]);
+    assert_eq!(metadata.maxscl, [17830, 16895, 14252]);
     assert_eq!(
         DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
         vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
@@ -1554,9 +1864,8 @@ fn sample62() {
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
         vec![3, 14024, 43, 56, 219, 1036, 2714, 4668, 14445]
     );
-    assert_eq!(metadata.knee_point_x, 0);
-    assert_eq!(metadata.knee_point_y, 0);
-    assert_eq!(metadata.bezier_curve_anchors, Vec::<u16>::new());
+
+    assert!(metadata.bezier_curve.is_none());
 
     assert_profile(&json, "A");
     assert_scene_info(&json, 8, 2, 2, 8);

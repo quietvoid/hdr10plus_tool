@@ -2,8 +2,6 @@ use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
-use ansi_term::Colour::{Blue, Green, Red};
-use deku::prelude::*;
 use indicatif::ProgressBar;
 use serde_json::{json, Value};
 
@@ -11,7 +9,7 @@ use hevc_parser::hevc::NAL_SEI_PREFIX;
 use hevc_parser::hevc::{Frame, NALUnit};
 use hevc_parser::HevcParser;
 
-use super::{metadata::Metadata, Format, TOOL_NAME, TOOL_VERSION};
+use super::{metadata::Hdr10PlusMetadata, Format, TOOL_NAME, TOOL_VERSION};
 
 const HDR10PLUS_SEI_HEADER: &[u8] = &[78, 1, 4];
 
@@ -20,14 +18,14 @@ pub struct Parser {
     input: PathBuf,
     output: Option<PathBuf>,
     verify: bool,
-    force_single_profile: bool,
+    validate: bool,
 }
 
 #[derive(Clone)]
 pub struct MetadataFrame {
     pub decoded_index: usize,
     pub presentation_number: usize,
-    pub metadata: Metadata,
+    pub metadata: Hdr10PlusMetadata,
 }
 
 impl Parser {
@@ -36,14 +34,14 @@ impl Parser {
         input: PathBuf,
         output: Option<PathBuf>,
         verify: bool,
-        force_single_profile: bool,
+        validate: bool,
     ) -> Self {
         Self {
             format,
             input,
             output,
             verify,
-            force_single_profile,
+            validate,
         }
     }
 
@@ -53,7 +51,7 @@ impl Parser {
         let mut parser = HevcParser::default();
 
         let result = match self.format {
-            Format::Matroska => panic!("unsupported"),
+            Format::Matroska => panic!("unsupported format matroska"),
             _ => self.parse_metadata(&self.input, Some(&pb), &mut parser),
         };
 
@@ -65,9 +63,9 @@ impl Parser {
                     println!("No metadata found in the input.");
                 } else if self.verify && vec[0][0] == 1 && vec[0].len() == 1 {
                     //Match returned vec to check for --verify
-                    println!("{}", Blue.paint("Dynamic HDR10+ metadata detected."));
+                    println!("Dynamic HDR10+ metadata detected.");
                 } else {
-                    let mut final_metadata = Self::llc_read_metadata(vec);
+                    let mut final_metadata = Self::llc_read_metadata(vec, self.validate);
 
                     //Sucessful parse & no --verify
                     if !final_metadata.is_empty() {
@@ -78,7 +76,7 @@ impl Parser {
 
                         self.write_json(final_metadata)
                     } else {
-                        println!("{}", Red.paint("Failed reading parsed metadata."));
+                        println!("Failed reading parsed metadata.");
                     }
                 }
             }
@@ -216,8 +214,8 @@ impl Parser {
         found_list
     }
 
-    pub fn llc_read_metadata(input: Vec<Vec<u8>>) -> Vec<MetadataFrame> {
-        print!("{}", Blue.paint("Reading parsed dynamic metadata... "));
+    pub fn llc_read_metadata(input: Vec<Vec<u8>>, validate: bool) -> Vec<MetadataFrame> {
+        print!("Reading parsed dynamic metadata... ");
         stdout().flush().ok();
 
         let mut complete_metadata: Vec<MetadataFrame> = Vec::new();
@@ -227,10 +225,12 @@ impl Parser {
             let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(data);
 
             // Parse metadata
-            let (_rest, metadata) = Metadata::from_bytes((&bytes, 0)).unwrap();
+            let metadata = Hdr10PlusMetadata::parse(bytes);
 
             // Validate values
-            metadata.validate();
+            if validate {
+                metadata.validate();
+            }
 
             let metadata_frame = MetadataFrame {
                 decoded_index: index,
@@ -241,17 +241,13 @@ impl Parser {
             complete_metadata.push(metadata_frame);
         }
 
-        println!("{}", Green.paint("Done."));
+        println!("Done.");
 
         complete_metadata
     }
 
-    pub fn generate_json(
-        metadata: &[MetadataFrame],
-        force_single_profile: bool,
-    ) -> (Value, Option<String>) {
-        let (profile, frame_json_list, warning): (&str, Vec<Value>, Option<String>) =
-            Metadata::json_list(metadata, force_single_profile);
+    pub fn generate_json(metadata: &[MetadataFrame]) -> Value {
+        let (profile, frame_json_list): (&str, Vec<Value>) = Hdr10PlusMetadata::json_list(metadata);
 
         let json_info = json!({
             "HDR10plusProfile": profile,
@@ -294,7 +290,7 @@ impl Parser {
             })
         });
 
-        (final_json, warning)
+        final_json
     }
 
     fn write_json(&self, metadata: Vec<MetadataFrame>) {
@@ -303,14 +299,10 @@ impl Parser {
                 let save_file = File::create(path).expect("Can't create file");
                 let mut writer = BufWriter::with_capacity(10_000_000, save_file);
 
-                print!(
-                    "{}",
-                    Blue.paint("Generating and writing metadata to JSON file... ")
-                );
+                print!("Generating and writing metadata to JSON file... ");
                 stdout().flush().ok();
 
-                let (final_json, warning) =
-                    Self::generate_json(&metadata, self.force_single_profile);
+                let final_json = Self::generate_json(&metadata);
 
                 assert!(writeln!(
                     writer,
@@ -319,11 +311,7 @@ impl Parser {
                 )
                 .is_ok());
 
-                println!("{}", Green.paint("Done."));
-
-                if warning.is_some() {
-                    println!("{}", warning.unwrap());
-                }
+                println!("Done.");
 
                 writer.flush().ok();
             }
@@ -332,7 +320,7 @@ impl Parser {
     }
 
     fn reorder_metadata(&self, frames: &[Frame], metadata: &mut Vec<MetadataFrame>) {
-        print!("{}", Blue.paint("Reordering metadata... "));
+        print!("Reordering metadata... ");
         stdout().flush().ok();
 
         metadata.sort_by_cached_key(|m| {
@@ -355,15 +343,15 @@ impl Parser {
             .enumerate()
             .for_each(|(idx, m)| m.presentation_number = idx);
 
-        println!("{}", Green.paint("Done."));
+        println!("Done.");
     }
 
-    pub fn _test(&self) -> Option<(Metadata, Value)> {
+    pub fn _test(&self) -> Option<(Hdr10PlusMetadata, Value)> {
         let mut metadata: Vec<MetadataFrame> = Vec::new();
         let mut parser = HevcParser::default();
 
         match self.parse_metadata(&self.input, None, &mut parser) {
-            Ok(vec) => metadata = Parser::llc_read_metadata(vec),
+            Ok(vec) => metadata = Parser::llc_read_metadata(vec, false),
             Err(e) => println!("{}", e),
         }
 
@@ -375,7 +363,8 @@ impl Parser {
             // Reorder to display output order
             self.reorder_metadata(frames, &mut metadata);
 
-            let (final_json, _) = Self::generate_json(&metadata, false);
+            let final_json = Self::generate_json(&metadata);
+
             Some((first_decoded_metadata, final_json))
         } else {
             None
