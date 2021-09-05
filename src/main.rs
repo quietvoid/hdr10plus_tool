@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use structopt::StructOpt;
 
 mod commands;
@@ -11,41 +11,12 @@ use inject::Injector;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "hdr10plus_parser",
+    name = "hdr10plus_tool",
     about = "Parses HDR10+ dynamic metadata in HEVC video files"
 )]
 struct Opt {
     #[structopt(subcommand)]
-    cmd: Option<Command>,
-
-    #[structopt(
-        name = "input",
-        short = "i",
-        long,
-        help = "Sets the input file to use",
-        long,
-        conflicts_with = "stdin",
-        conflicts_with = "cmd",
-        parse(from_os_str)
-    )]
-    input: Option<PathBuf>,
-
-    #[structopt(
-        help = "Uses stdin as input data",
-        conflicts_with = "input",
-        conflicts_with = "cmd",
-        parse(from_os_str)
-    )]
-    stdin: Option<PathBuf>,
-
-    #[structopt(
-        short = "o",
-        long,
-        help = "Sets the output JSON file to use",
-        conflicts_with = "cmd",
-        parse(from_os_str)
-    )]
-    output: Option<PathBuf>,
+    cmd: Command,
 
     #[structopt(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
@@ -64,24 +35,20 @@ pub enum Format {
 fn main() {
     let opt = Opt::from_args();
 
-    let verify = opt.verify || opt.output.is_none();
+    let verify = opt.verify;
     let validate = !opt.skip_validation;
 
-    if let Some(cmd) = opt.cmd {
-        match cmd {
-            Command::Extract {
-                input,
-                stdin,
-                output,
-            } => extract_json(input, stdin, output, verify, validate),
-            Command::Inject {
-                input,
-                json_in,
-                output,
-            } => Injector::run(input, json_in, output, validate),
-        }
-    } else {
-        extract_json(opt.input, opt.stdin, opt.output, verify, validate);
+    match opt.cmd {
+        Command::Extract {
+            input,
+            stdin,
+            output,
+        } => extract_json(input, stdin, output, verify, validate),
+        Command::Inject {
+            input,
+            json_in,
+            output,
+        } => Injector::run(input, json_in, output, validate),
     }
 }
 

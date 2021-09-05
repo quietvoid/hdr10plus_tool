@@ -7,7 +7,7 @@ use structopt::StructOpt;
 use super::{hdr10plus, input_format, Format};
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "hdr10plus_tool", about = "HDR10+ utility")]
+#[structopt(name = "hdr10plus_tool", about = "CLI utility to work with HDR10+ in HEVC files")]
 pub enum Command {
     Extract {
         #[structopt(

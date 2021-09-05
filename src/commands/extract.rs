@@ -20,7 +20,13 @@ pub fn extract_json(
 
     match input_format(&input) {
         Ok(format) => {
-            let parser = Parser::new(format, input, output, verify, validate);
+            let verify_default = if output.is_none() {
+                true
+            } else {
+                verify
+            };
+
+            let parser = Parser::new(format, input, output, verify_default, validate);
             parser.process_input();
         }
         Err(msg) => println!("{}", msg),

@@ -173,10 +173,10 @@ impl Injector {
                     .template("[{elapsed_precise}] {bar:60.cyan} {percent}%"),
             );
 
-            let last_sei_prefix_indices: Vec<usize> = frames
+            let first_slice_indices: Vec<usize> = frames
                 .par_iter()
                 .map(|f| {
-                    let index = find_last_sei_prefix_nal_index(nals, f);
+                    let index = find_first_slice_nal_index(nals, f);
 
                     pb_indices.inc(1);
 
@@ -184,12 +184,9 @@ impl Injector {
                 })
                 .collect();
 
-            println!("\n\n{:?}\n\n", last_sei_prefix_indices);
-            stdout().flush().ok();
-
             pb_indices.finish_and_clear();
 
-            assert_eq!(frames.len(), last_sei_prefix_indices.len());
+            assert_eq!(frames.len(), first_slice_indices.len());
 
             println!("Rewriting file with interleaved HDR10+ NALUs..");
             stdout().flush().ok();
@@ -266,9 +263,9 @@ impl Injector {
                     let global_index = nals_parsed + cur_index;
 
                     // Slice after interleaved metadata
-                    if last_sei_prefix_indices.contains(&global_index) {
+                    if first_slice_indices.contains(&global_index) {
                         // We can unwrap because parsed indices are the same
-                        let metadata_index = last_sei_prefix_indices
+                        let metadata_index = first_slice_indices
                             .iter()
                             .position(|i| i == &global_index)
                             .unwrap();
@@ -320,33 +317,8 @@ impl Injector {
     }
 }
 
-fn find_last_sei_prefix_nal_index(nals: &[NALUnit], frame: &Frame) -> usize {
-    // SEI_PREFIX NALUs
-    let sei_prefix_nalus = frame.nals
-        .iter()
-        .enumerate()
-        .filter(|(_idx, nal)| nal.nal_type == NAL_SEI_PREFIX);
-
-    // We want to inject after the last one
-    let last_sei_prefix = sei_prefix_nalus
-        .enumerate()
-        .max_by_key(|(_idx1, (idx2, _))| *idx2)
-        .unwrap();
-
-    let last_sei_prefix_global_index = last_sei_prefix.1 .0;
-    let last_sei_prefix_nal = last_sei_prefix.1 .1;
-
-    if let Some(last_sei_index) = nals.iter().position(|n| {
-        n.decoded_frame_index == frame.decoded_number && last_sei_prefix_nal.nal_type == n.nal_type
-    }) {
-        last_sei_index + last_sei_prefix_global_index - 1
-    } else {
-        panic!("Could not find a NAL for frame {}", frame.decoded_number);
-    }
-}
-
 fn find_first_slice_nal_index(nals: &[NALUnit], frame: &Frame) -> usize {
-    let slice_nals = frame.nals.iter().enumerate().filter(|(_idx, nal)| {
+    let slice_nals = frame.nals.iter().filter(| nal| {
         matches!(
             nal.nal_type,
             NAL_TRAIL_R
@@ -368,23 +340,18 @@ fn find_first_slice_nal_index(nals: &[NALUnit], frame: &Frame) -> usize {
         )
     });
 
-    // Assuming the slices are decoded in order, the highest index is the last slice NAL
     let first_slice = slice_nals
         .enumerate()
-        .min_by_key(|(_idx1, (idx2, _))| *idx2)
+        .min_by_key(|(idx, _nal)| *idx)
         .unwrap();
 
-    let first_slice_index = first_slice.0;
-    let first_slice_global_index = first_slice.1 .0;
-    let first_slice_nal = first_slice.1 .1;
+    let first_slice_nal = first_slice.1;
 
-    // Use the last nal because there might be suffix NALs (EL or SEI suffix)
-    let first_nal_offset = first_slice_index - first_slice_global_index - 1;
-
+    // We want the index of the NAL before the first slice, since we add after
     if let Some(first_slice_index) = nals.iter().position(|n| {
         n.decoded_frame_index == frame.decoded_number && first_slice_nal.nal_type == n.nal_type
     }) {
-        first_slice_index + first_nal_offset
+        first_slice_index - 1
     } else {
         panic!("Could not find a NAL for frame {}", frame.decoded_number);
     }
