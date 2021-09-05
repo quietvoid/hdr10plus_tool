@@ -1,5 +1,5 @@
 # hdr10plus_tool [![Tests](https://github.com/quietvoid/hdr10plus_tool/workflows/Tests/badge.svg)](https://github.com/quietvoid/hdr10plus_tool/actions?query=workflow%3ATests) [![Artifacts](https://github.com/quietvoid/hdr10plus_tool/workflows/Artifacts/badge.svg)](https://github.com/quietvoid/hdr10plus_tool/actions?query=workflow%3AArtifacts)
-CLI utility to work with HDR10+ in HEVC files.
+CLI utility to work with HDR10+ in HEVC files.  
 Previously named `hdr10plus_parser`, now it's more than just a parser.
 &nbsp;
 
@@ -9,8 +9,8 @@ Options that apply to the commands:
 
 ## Commands
 * #### extract
-    Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file.
-    Also calculates the scene information for compatibility with Samsung tools.
+    Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file.  
+    Also calculates the scene information for compatibility with Samsung tools.  
 
     If no output is specified, the file is only parsed partially to verify presence of metadata.
 
