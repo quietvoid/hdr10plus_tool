@@ -18,14 +18,14 @@ use rayon::prelude::*;
 
 pub struct Injector {
     input: PathBuf,
-    json_in: PathBuf,
+    json: PathBuf,
     output: PathBuf,
 
     metadata_list: Option<Vec<Hdr10PlusJsonMetadata>>,
 }
 
 impl Injector {
-    pub fn run(input: PathBuf, json_in: PathBuf, output: Option<PathBuf>, validate: bool) {
+    pub fn run(input: PathBuf, json: PathBuf, output: Option<PathBuf>, validate: bool) {
         match input_format(&input) {
             Ok(format) => {
                 if let Format::Raw = format {
@@ -34,7 +34,7 @@ impl Injector {
                         None => PathBuf::from("injected_output.hevc"),
                     };
 
-                    let mut injector = Injector::new(input, json_in, output);
+                    let mut injector = Injector::new(input, json, output);
                     let mut parser = HevcParser::default();
 
                     injector.process_input(&mut parser, format);
@@ -125,15 +125,15 @@ impl Injector {
         pb.finish_and_clear();
     }
 
-    pub fn new(input: PathBuf, json_in: PathBuf, output: PathBuf) -> Injector {
+    pub fn new(input: PathBuf, json: PathBuf, output: PathBuf) -> Injector {
         let mut injector = Injector {
             input,
-            json_in,
+            json,
             output,
             metadata_list: None,
         };
 
-        let metadata_root = MetadataJsonRoot::parse(&injector.json_in);
+        let metadata_root = MetadataJsonRoot::parse(&injector.json);
         injector.metadata_list = Some(metadata_root.scene_info);
 
         injector

@@ -23,7 +23,7 @@ Options that apply to the commands:
     Interleaves HDR10+ metadata NAL units before slices in an HEVC encoded bitstream.  
     `--verify` has no effect with this command.
     
-    * Example: `hdr10plus_tool inject -i video.hevc --j metadata.json -o injected_output.hevc`  
+    * Example: `hdr10plus_tool inject -i video.hevc -j metadata.json -o injected_output.hevc`  
 &nbsp;
 
 ## Sample files

@@ -46,9 +46,9 @@ fn main() {
         } => extract_json(input, stdin, output, verify, validate),
         Command::Inject {
             input,
-            json_in,
+            json,
             output,
-        } => Injector::run(input, json_in, output, validate),
+        } => Injector::run(input, json, output, validate),
     }
 }
 

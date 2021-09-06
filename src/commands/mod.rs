@@ -56,7 +56,7 @@ pub enum Command {
             help = "Sets the input JSON file to use",
             parse(from_os_str)
         )]
-        json_in: PathBuf,
+        json: PathBuf,
 
         #[structopt(
             long,
