@@ -191,16 +191,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
 
 [[package]]
+name = "hdr10plus"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "bitvec_helpers",
+ "hevc_parser",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hdr10plus_tool"
 version = "1.0.0"
 dependencies = [
  "bitvec 0.20.4",
  "bitvec_helpers",
+ "hdr10plus",
  "hevc_parser",
  "indicatif",
  "rayon",
  "regex",
- "serde",
  "serde_json",
  "structopt",
 ]

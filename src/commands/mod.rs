@@ -4,10 +4,14 @@ pub mod inject;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use super::{hdr10plus, input_format, Format};
+use super::core::{initialize_progress_bar, parser};
+use super::{input_format, Format};
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "hdr10plus_tool", about = "CLI utility to work with HDR10+ in HEVC files")]
+#[structopt(
+    name = "hdr10plus_tool",
+    about = "CLI utility to work with HDR10+ in HEVC files"
+)]
 pub enum Command {
     Extract {
         #[structopt(

@@ -3,22 +3,27 @@ use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
 use indicatif::ProgressBar;
-use serde_json::{json, Value};
 
 use hevc_parser::hevc::NAL_SEI_PREFIX;
 use hevc_parser::hevc::{Frame, NALUnit};
 use hevc_parser::HevcParser;
 
-use super::{metadata::Hdr10PlusMetadata, Format, TOOL_NAME, TOOL_VERSION};
+use hdr10plus::metadata::Hdr10PlusMetadata;
+use hdr10plus::metadata_json::generate_json;
+
+use super::Format;
+
+pub const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
+pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const HDR10PLUS_SEI_HEADER: &[u8] = &[78, 1, 4];
 
 pub struct Parser {
-    format: Format,
-    input: PathBuf,
-    output: Option<PathBuf>,
-    verify: bool,
-    validate: bool,
+    pub format: Format,
+    pub input: PathBuf,
+    pub output: Option<PathBuf>,
+    pub verify: bool,
+    pub validate: bool,
 }
 
 #[derive(Clone)]
@@ -229,7 +234,9 @@ impl Parser {
 
             // Validate values
             if validate {
-                metadata.validate();
+                if let Err(e) = metadata.validate() {
+                    panic!("{:?}", e);
+                }
             }
 
             let metadata_frame = MetadataFrame {
@@ -246,53 +253,6 @@ impl Parser {
         complete_metadata
     }
 
-    pub fn generate_json(metadata: &[MetadataFrame]) -> Value {
-        let (profile, frame_json_list): (&str, Vec<Value>) = Hdr10PlusMetadata::json_list(metadata);
-
-        let json_info = json!({
-            "HDR10plusProfile": profile,
-            "Version": format!("{}.0", &metadata[0].metadata.application_version),
-        });
-
-        let first_frames: Vec<u64> = frame_json_list
-            .iter()
-            .filter_map(|meta| {
-                if meta.get("SceneFrameIndex").unwrap().as_u64().unwrap() == 0 {
-                    meta.get("SequenceFrameIndex").unwrap().as_u64()
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        let mut scene_lengths: Vec<u64> = Vec::with_capacity(first_frames.len());
-
-        for i in 0..first_frames.len() {
-            if i < first_frames.len() - 1 {
-                scene_lengths.push(first_frames[i + 1] - first_frames[i]);
-            } else {
-                scene_lengths.push(frame_json_list.len() as u64 - first_frames[i]);
-            }
-        }
-
-        let scene_info_json = json!({
-            "SceneFirstFrameIndex": first_frames,
-            "SceneFrameNumbers": scene_lengths,
-        });
-
-        let final_json = json!({
-            "JSONInfo": json_info,
-            "SceneInfo": frame_json_list,
-            "SceneInfoSummary": scene_info_json,
-            "ToolInfo": json!({
-                "Tool": TOOL_NAME,
-                "Version": TOOL_VERSION,
-            })
-        });
-
-        final_json
-    }
-
     fn write_json(&self, metadata: Vec<MetadataFrame>) {
         match &self.output {
             Some(path) => {
@@ -302,7 +262,9 @@ impl Parser {
                 print!("Generating and writing metadata to JSON file... ");
                 stdout().flush().ok();
 
-                let final_json = Self::generate_json(&metadata);
+                let list: Vec<&Hdr10PlusMetadata> =
+                    metadata.iter().map(|mf| &mf.metadata).collect();
+                let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
 
                 assert!(writeln!(
                     writer,
@@ -319,7 +281,7 @@ impl Parser {
         }
     }
 
-    fn reorder_metadata(&self, frames: &[Frame], metadata: &mut Vec<MetadataFrame>) {
+    pub fn reorder_metadata(&self, frames: &[Frame], metadata: &mut Vec<MetadataFrame>) {
         print!("Reordering metadata... ");
         stdout().flush().ok();
 
@@ -344,30 +306,5 @@ impl Parser {
             .for_each(|(idx, m)| m.presentation_number = idx);
 
         println!("Done.");
-    }
-
-    pub fn _test(&self) -> Option<(Hdr10PlusMetadata, Value)> {
-        let mut metadata: Vec<MetadataFrame> = Vec::new();
-        let mut parser = HevcParser::default();
-
-        match self.parse_metadata(&self.input, None, &mut parser) {
-            Ok(vec) => metadata = Parser::llc_read_metadata(vec, false),
-            Err(e) => println!("{}", e),
-        }
-
-        if !metadata.is_empty() {
-            let first_decoded_metadata = metadata[0].metadata.clone();
-
-            let frames = parser.ordered_frames();
-
-            // Reorder to display output order
-            self.reorder_metadata(frames, &mut metadata);
-
-            let final_json = Self::generate_json(&metadata);
-
-            Some((first_decoded_metadata, final_json))
-        } else {
-            None
-        }
     }
 }

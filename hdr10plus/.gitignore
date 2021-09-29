@@ -1,0 +1,13 @@
+/target
+/assets/*-sei.log
+/assets/*-meta.json
+**/*.rs.bk
+/*.mkv
+/*.hevc
+/*.txt
+/*.vpy
+/*.bin
+/*.y4m
+/*.ffindex
+/*.json
+Cargo.lock

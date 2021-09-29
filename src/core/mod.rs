@@ -3,21 +3,10 @@ use std::{fs::File, path::Path};
 
 use super::Format;
 
-pub mod metadata;
-pub mod metadata_json;
 pub mod parser;
-
-const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
-const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Debug)]
-pub struct RpuOptions {
-    pub mode: Option<u8>,
-    pub crop: bool,
-}
 
 pub fn initialize_progress_bar(format: &Format, input: &Path) -> ProgressBar {
     let pb: ProgressBar;

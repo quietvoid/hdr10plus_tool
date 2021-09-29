@@ -1,8 +1,5 @@
+use anyhow::{bail, Result};
 use bitvec_helpers::{bitvec_reader::BitVecReader, bitvec_writer::BitVecWriter};
-use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
-use serde_json::{json, Value};
-
-use super::{metadata_json, parser::MetadataFrame};
 
 const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
 const DISTRIBUTION_INDEXES_10: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
@@ -69,8 +66,8 @@ pub struct ActualTargetedSystemDisplay {
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct DistributionMaxRgb {
-    percentage: u8,
-    percentile: u32,
+    pub percentage: u8,
+    pub percentile: u32,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -162,91 +159,65 @@ impl Hdr10PlusMetadata {
         meta
     }
 
-    pub fn validate(&self) {
+    pub fn validate(&self) -> Result<()> {
         // SMPTE ST-2094 Application 4, Version 1
-        assert_eq!(self.application_identifier, 4);
-        assert_eq!(self.application_version, 1);
+        if self.application_identifier != 4 {
+            bail!(
+                "Invalid application_identifier: {}",
+                self.application_identifier
+            );
+        }
+
+        if self.application_version != 1 {
+            bail!("Invalid application_version: {}", self.application_version);
+        }
 
         // For version 1
-        assert_eq!(self.num_windows, 1);
-        assert!(!self.targeted_system_display_actual_peak_luminance_flag);
-        assert!(!self.mastering_display_actual_peak_luminance_flag);
-        assert!(!self.color_saturation_mapping_flag);
+        if self.application_version == 1 {
+            self.validate_v1()?;
+        }
 
         // The value of targeted_system_display_maximum_luminance shall be in the range of 0 to 10000, inclusive
-        assert!(self.targeted_system_display_maximum_luminance <= 10000);
+        if self.targeted_system_display_maximum_luminance > 10000 {
+            bail!("Invalid targeted_system_display_maximum_luminance, should be at most 10 0000. Actual: {}", self.targeted_system_display_maximum_luminance);
+        }
 
         // Profile B needs Bezier curve information and a non zero target display (for OOTF)
         if self.tone_mapping_flag {
-            assert!(self.targeted_system_display_maximum_luminance > 0);
-        } else {
-            assert_eq!(self.targeted_system_display_maximum_luminance, 0);
+            if self.targeted_system_display_maximum_luminance == 0 {
+                bail!("Invalid targeted_system_display_maximum_luminance for profile B, must not be zero.");
+            }
+        } else if self.targeted_system_display_maximum_luminance != 0 {
+            bail!("Invalid targeted_system_display_maximum_luminance for profile A, must be zero.");
         }
 
         // Shall be under 100000, inclusive
-        self.maxscl.iter().for_each(|&v| assert!(v <= 100_000));
+        if !self.maxscl.iter().all(|&v| v <= 100_000) {
+            bail!("Invalid MaxScl values over 100 000: {:?}", self.maxscl);
+        }
 
         // Shall be under 100000, inclusive
-        assert!(self.average_maxrgb <= 100_000);
+        if self.average_maxrgb > 100_000 {
+            bail!(
+                "Invalid AverageMaxRGB value over 100 000: {}",
+                self.average_maxrgb
+            );
+        }
 
         // Shall be under 100000, inclusive
         DistributionMaxRgb::validate(
             &self.distribution_maxrgb,
             self.num_distribution_maxrgb_percentiles,
-        );
+        )?;
 
         if let Some(bc) = &self.bezier_curve {
-            bc.validate();
+            bc.validate()?;
         }
+
+        Ok(())
     }
 
-    pub fn json_list(list: &[MetadataFrame]) -> (&str, Vec<Value>) {
-        let profile = if list.iter().all(|m| m.metadata.profile == "B") {
-            "B"
-        } else if list.iter().all(|m| m.metadata.profile == "A") {
-            "A"
-        } else {
-            "N/A"
-        };
-
-        let mut metadata_json_array = list
-            .iter()
-            .map(|mf| &mf.metadata)
-            .map(|m| {
-                // Profile A, no bezier curve data
-                if profile == "A" {
-                    json!({
-                        "LuminanceParameters": {
-                            "AverageRGB": m.average_maxrgb,
-                            "LuminanceDistributions": DistributionMaxRgb::separate_json(&m.distribution_maxrgb),
-                            "MaxScl": m.maxscl
-                        },
-                        "NumberOfWindows": m.num_windows,
-                        "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
-                    })
-                } else { // Profile B
-                    let bc = m.bezier_curve.as_ref().expect("Invalid profile B: no Bezier curve data");
-
-                    json!({
-                        "BezierCurveData": bc.to_json(),
-                        "LuminanceParameters": {
-                            "AverageRGB": m.average_maxrgb,
-                            "LuminanceDistributions": DistributionMaxRgb::separate_json(&m.distribution_maxrgb),
-                            "MaxScl": m.maxscl
-                        },
-                        "NumberOfWindows": m.num_windows,
-                        "TargetedSystemDisplayMaximumLuminance": m.targeted_system_display_maximum_luminance
-                    })
-                }
-            })
-            .collect::<Vec<Value>>();
-
-        compute_scene_information(profile, &mut metadata_json_array);
-
-        (profile, metadata_json_array)
-    }
-
-    fn set_profile(&mut self) {
+    pub(crate) fn set_profile(&mut self) {
         let profile = if self.tone_mapping_flag
             && self.targeted_system_display_maximum_luminance > 0
         {
@@ -268,16 +239,10 @@ impl Hdr10PlusMetadata {
         self.profile = profile.to_string();
     }
 
-    pub fn encode(&self) -> Vec<u8> {
-        // Write NALU SEI_PREFIX header
-        let mut header_writer = BitVecWriter::new();
-
-        header_writer.write(false); // forbidden_zero_bit
-        header_writer.write_n(&hevc::NAL_SEI_PREFIX.to_be_bytes(), 6); // nal_type
-        header_writer.write_n(&(0_u8).to_be_bytes(), 6); // nuh_layer_id
-        header_writer.write_n(&(1_u8).to_be_bytes(), 3); // temporal_id
-
-        header_writer.write_n(&hevc::USER_DATA_REGISTERED_ITU_T_35.to_be_bytes(), 8);
+    pub fn encode(&self, validate: bool) -> Result<Vec<u8>> {
+        if validate {
+            self.validate()?;
+        }
 
         let mut writer = BitVecWriter::new();
 
@@ -340,67 +305,38 @@ impl Hdr10PlusMetadata {
             writer.write_n(&self.color_saturation_weight.to_be_bytes(), 6);
         }
 
-        let mut payload = writer.as_slice().to_vec();
+        let payload = writer.as_slice().to_vec();
 
-        // FIXME: This should probably be 1024 but not sure how to write a longer header
-        assert!(payload.len() <= 255);
-        header_writer.write_n(&payload.len().to_be_bytes(), 8);
-
-        payload.push(0x80);
-
-        let mut data = header_writer.as_slice().to_vec();
-        data.append(&mut payload);
-
-        add_start_code_emulation_prevention_3_byte(&mut data);
-
-        data
+        Ok(payload)
     }
-}
 
-fn compute_scene_information(profile: &str, metadata_json_array: &mut Vec<Value>) {
-    let mut scene_frame_index: u64 = 0;
-    let mut scene_id: u64 = 0;
-
-    for (sequence_frame_index, index) in (0..metadata_json_array.len()).enumerate() {
-        if index > 0 {
-            if let Some(metadata) = metadata_json_array[index].as_object() {
-                if let Some(prev_metadata) = metadata_json_array[index - 1].as_object() {
-                    // Can only be different if profile B
-                    let different_bezier = if profile == "B" {
-                        metadata.get("BezierCurveData") != prev_metadata.get("BezierCurveData")
-                    } else {
-                        false
-                    };
-
-                    let different_luminance = metadata.get("LuminanceParameters")
-                        != prev_metadata.get("LuminanceParameters");
-                    let different_windows =
-                        metadata.get("NumberOfWindows") != prev_metadata.get("NumberOfWindows");
-                    let different_target = metadata.get("TargetedSystemDisplayMaximumLuminance")
-                        != prev_metadata.get("TargetedSystemDisplayMaximumLuminance");
-
-                    if different_bezier
-                        || different_luminance
-                        || different_windows
-                        || different_target
-                    {
-                        scene_id += 1;
-                        scene_frame_index = 0;
-                    }
-                }
-            }
+    fn validate_v1(&self) -> Result<()> {
+        if self.num_windows != 1 {
+            bail!("Invalid num_windows: {}", self.num_windows);
         }
 
-        if let Some(map) = metadata_json_array[index].as_object_mut() {
-            map.insert("SceneFrameIndex".to_string(), json!(scene_frame_index));
-            map.insert("SceneId".to_string(), json!(scene_id));
-            map.insert(
-                "SequenceFrameIndex".to_string(),
-                json!(sequence_frame_index),
+        if self.targeted_system_display_actual_peak_luminance_flag {
+            bail!(
+                "Invalid for version 1: targeted_system_display_actual_peak_luminance_flag {}",
+                self.targeted_system_display_actual_peak_luminance_flag
             );
         }
 
-        scene_frame_index += 1;
+        if self.mastering_display_actual_peak_luminance_flag {
+            bail!(
+                "Invalid for version 1: mastering_display_actual_peak_luminance_flag {}",
+                self.mastering_display_actual_peak_luminance_flag
+            );
+        }
+
+        if self.color_saturation_mapping_flag {
+            bail!(
+                "Invalid for version 1: color_saturation_mapping_flag {}",
+                self.color_saturation_mapping_flag
+            );
+        }
+
+        Ok(())
     }
 }
 
@@ -420,19 +356,12 @@ impl DistributionMaxRgb {
         list.iter().map(|v| v.percentile).collect::<Vec<u32>>()
     }
 
-    fn separate_json(list: &[Self]) -> Value {
-        json!({
-            "DistributionIndex": Self::distribution_index(list),
-            "DistributionValues": Self::distribution_values(list),
-        })
-    }
-
-    pub fn validate(list: &[Self], num_distribution_maxrgb_percentiles: u8) {
+    pub fn validate(list: &[Self], num_distribution_maxrgb_percentiles: u8) -> Result<()> {
         // The value of num_distribution_maxrgb_percentiles shall be 9 or 10 (for all we know)
         let correct_indexes = match num_distribution_maxrgb_percentiles {
             9 => DISTRIBUTION_INDEXES_9,
             10 => DISTRIBUTION_INDEXES_10,
-            _ => panic!(
+            _ => bail!(
                 "Invalid number of percentiles: {}",
                 num_distribution_maxrgb_percentiles
             ),
@@ -441,11 +370,24 @@ impl DistributionMaxRgb {
         // Distribution indexes should be equal to:
         // 9 indexes: [1, 5, 10, 25, 50, 75, 90, 95, 99]
         // 10 indexes: [1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
-        assert_eq!(Self::distribution_index(list), correct_indexes);
+        if Self::distribution_index(list) != correct_indexes {
+            bail!(
+                "Invalid DistributionIndex values: {:?}",
+                Self::distribution_index(list)
+            );
+        }
 
-        Self::distribution_values(list)
+        if !Self::distribution_values(list)
             .iter()
-            .for_each(|&v| assert!(v <= 100_000));
+            .all(|&v| v <= 100_000)
+        {
+            bail!(
+                "Invalid DistributionValues over 100 000: {:?}",
+                Self::distribution_values(list)
+            );
+        }
+
+        Ok(())
     }
 
     pub fn encode(&self, writer: &mut BitVecWriter) {
@@ -599,26 +541,33 @@ impl BezierCurve {
         bc
     }
 
-    fn validate(&self) {
+    fn validate(&self) -> Result<()> {
         // The value of knee_point_x shall be in the range of 0 to 1, and in multiples of 1/4095
-        assert!(self.knee_point_x < 4096);
-        assert!(self.knee_point_y < 4096);
+        if self.knee_point_x > 4096 {
+            bail!("Invalid knee point x: {}", self.knee_point_x);
+        }
+
+        if self.knee_point_y > 4096 {
+            bail!("Invalid knee point y: {}", self.knee_point_y);
+        }
 
         // THe maximum value shall be 9
-        assert!(self.num_bezier_curve_anchors <= 9);
+        if self.num_bezier_curve_anchors > 9 {
+            bail!(
+                "Invalid number of Bezier curve anchors: {}",
+                self.num_bezier_curve_anchors
+            );
+        }
 
         // Shall be under 1024
-        self.bezier_curve_anchors
-            .iter()
-            .for_each(|&v| assert!(v < 1024));
-    }
+        if !self.bezier_curve_anchors.iter().all(|&v| v < 1024) {
+            bail!(
+                "Invalid Bezier curve values: {:?}",
+                self.bezier_curve_anchors
+            );
+        }
 
-    fn to_json(&self) -> Value {
-        json!({
-            "Anchors": self.bezier_curve_anchors,
-            "KneePointX": self.knee_point_x,
-            "KneePointY": self.knee_point_y
-        })
+        Ok(())
     }
 
     pub fn encode(&self, writer: &mut BitVecWriter) {
@@ -629,73 +578,5 @@ impl BezierCurve {
         self.bezier_curve_anchors
             .iter()
             .for_each(|e| writer.write_n(&e.to_be_bytes(), 10));
-    }
-}
-
-impl From<&metadata_json::Hdr10PlusJsonMetadata> for Hdr10PlusMetadata {
-    fn from(jm: &metadata_json::Hdr10PlusJsonMetadata) -> Self {
-        let lp = &jm.luminance_parameters;
-        let dists = &lp.luminance_distributions;
-
-        assert!(lp.max_scl.len() == 3);
-        let maxscl = [lp.max_scl[0], lp.max_scl[1], lp.max_scl[2]];
-
-        assert!(dists.distribution_index.len() == dists.distribution_values.len());
-        assert!(dists.distribution_index.len() <= 10);
-        assert!(dists.distribution_values.len() <= 10);
-
-        let distribution_parsed = dists
-            .distribution_index
-            .iter()
-            .zip(dists.distribution_values.iter())
-            .map(|(percentage, percentile)| DistributionMaxRgb {
-                percentage: *percentage,
-                percentile: *percentile,
-            })
-            .collect();
-
-        let tone_mapping_flag = jm.bezier_curve_data.is_some();
-
-        let bezier_curve = if let Some(bcd) = &jm.bezier_curve_data {
-            let bc = BezierCurve {
-                knee_point_x: bcd.knee_point_x,
-                knee_point_y: bcd.knee_point_y,
-                num_bezier_curve_anchors: bcd.anchors.len() as u8,
-                bezier_curve_anchors: bcd.anchors.clone(),
-            };
-
-            Some(bc)
-        } else {
-            None
-        };
-
-        let mut meta = Self {
-            itu_t_t35_country_code: 0xB5,
-            itu_t_t35_terminal_provider_code: 0x3C,
-            itu_t_t35_terminal_provider_oriented_code: 1,
-            application_identifier: 4,
-            application_version: 1,
-            num_windows: jm.number_of_windows,
-            processing_windows: None,
-            targeted_system_display_maximum_luminance: jm.targeted_system_display_maximum_luminance,
-            targeted_system_display_actual_peak_luminance_flag: false,
-            actual_targeted_system_display: None,
-            maxscl,
-            average_maxrgb: lp.average_rgb,
-            num_distribution_maxrgb_percentiles: dists.distribution_index.len() as u8,
-            distribution_maxrgb: distribution_parsed,
-            fraction_bright_pixels: 0,
-            mastering_display_actual_peak_luminance_flag: false,
-            actual_mastering_display: None,
-            tone_mapping_flag,
-            bezier_curve,
-            color_saturation_mapping_flag: false,
-            color_saturation_weight: 0,
-            ..Default::default()
-        };
-
-        meta.set_profile();
-
-        meta
     }
 }

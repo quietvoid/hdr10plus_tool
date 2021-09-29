@@ -5,11 +5,9 @@ use std::path::PathBuf;
 //use crate::dovi::get_aud;
 
 const OUT_NAL_HEADER: &[u8] = &[0, 0, 0, 1];
-use crate::hdr10plus::metadata_json::MetadataJsonRoot;
+use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
 
-use super::hdr10plus::{initialize_progress_bar, metadata_json::Hdr10PlusJsonMetadata};
-
-use super::{input_format, Format};
+use super::{initialize_progress_bar, input_format, Format};
 
 use hevc_parser::hevc::*;
 use hevc_parser::HevcParser;
@@ -133,7 +131,7 @@ impl Injector {
             metadata_list: None,
         };
 
-        let metadata_root = MetadataJsonRoot::parse(&injector.json);
+        let metadata_root = MetadataJsonRoot::from_file(&injector.json).unwrap();
         injector.metadata_list = Some(metadata_root.scene_info);
 
         injector
@@ -274,7 +272,11 @@ impl Injector {
                         // Otherwise, write the same data as previous
                         if metadata_index < metadata_list.len() {
                             let meta = &mut metadata_list[metadata_index];
-                            let data = meta.encode_binary(validate);
+                            let data = match hdr10plus::hevc::encode_hevc_from_json(meta, validate)
+                            {
+                                Ok(v) => v,
+                                Err(e) => panic!("{:?}", e),
+                            };
 
                             writer.write_all(OUT_NAL_HEADER)?;
                             writer.write_all(&data)?;
@@ -318,7 +320,7 @@ impl Injector {
 }
 
 fn find_first_slice_nal_index(nals: &[NALUnit], frame: &Frame) -> usize {
-    let slice_nals = frame.nals.iter().filter(| nal| {
+    let slice_nals = frame.nals.iter().filter(|nal| {
         matches!(
             nal.nal_type,
             NAL_TRAIL_R

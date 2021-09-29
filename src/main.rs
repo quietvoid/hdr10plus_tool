@@ -3,7 +3,7 @@ use std::path::Path;
 use structopt::StructOpt;
 
 mod commands;
-mod hdr10plus;
+mod core;
 
 use commands::{extract, inject, Command};
 use extract::extract_json;
