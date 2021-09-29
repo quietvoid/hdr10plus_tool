@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use super::hdr10plus::parser::Parser;
-use super::input_format;
+use super::{input_format, parser::Parser};
 
 pub fn extract_json(
     input: Option<PathBuf>,
@@ -20,11 +19,7 @@ pub fn extract_json(
 
     match input_format(&input) {
         Ok(format) => {
-            let verify_default = if output.is_none() {
-                true
-            } else {
-                verify
-            };
+            let verify_default = if output.is_none() { true } else { verify };
 
             let parser = Parser::new(format, input, output, verify_default, validate);
             parser.process_input();

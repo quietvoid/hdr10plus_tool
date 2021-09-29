@@ -1,11 +1,40 @@
 use std::path::PathBuf;
 
+use hdr10plus::{
+    metadata::{DistributionMaxRgb, Hdr10PlusMetadata},
+    metadata_json::generate_json,
+};
+use hevc_parser::HevcParser;
 use serde_json::{json, Value};
 
-use super::metadata::DistributionMaxRgb;
-use super::parser::Parser;
+use super::{parser, Format};
+use parser::{MetadataFrame, Parser, TOOL_NAME, TOOL_VERSION};
 
-use super::Format;
+pub fn run_test(parser: &Parser) -> Option<(Hdr10PlusMetadata, Value)> {
+    let mut metadata: Vec<MetadataFrame> = Vec::new();
+    let mut hevc_parser = HevcParser::default();
+
+    match parser.parse_metadata(&parser.input, None, &mut hevc_parser) {
+        Ok(vec) => metadata = Parser::llc_read_metadata(vec, parser.validate),
+        Err(e) => println!("{}", e),
+    }
+
+    if !metadata.is_empty() {
+        let first_decoded_metadata = metadata[0].metadata.clone();
+
+        let frames = hevc_parser.ordered_frames();
+
+        // Reorder to display output order
+        parser.reorder_metadata(frames, &mut metadata);
+
+        let list: Vec<&Hdr10PlusMetadata> = metadata.iter().map(|mf| &mf.metadata).collect();
+        let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
+
+        Some((first_decoded_metadata, final_json))
+    } else {
+        None
+    }
+}
 
 fn assert_profile(json: &Value, profile: &str) {
     let json_info = &json.get("JSONInfo").unwrap().as_object().unwrap();
@@ -44,8 +73,8 @@ fn assert_scene_info(
 #[test]
 fn sample01() {
     let input_file = PathBuf::from("./assets/ToS-s01.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -77,7 +106,7 @@ fn sample01() {
 fn sample02() {
     let input_file = PathBuf::from("./assets/ToS-s02.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -109,7 +138,7 @@ fn sample02() {
 fn sample03() {
     let input_file = PathBuf::from("./assets/ToS-s03.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -140,8 +169,8 @@ fn sample03() {
 #[test]
 fn sample04() {
     let input_file = PathBuf::from("./assets/ToS-s04.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -172,8 +201,8 @@ fn sample04() {
 #[test]
 fn sample05() {
     let input_file = PathBuf::from("./assets/ToS-s05.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -204,8 +233,8 @@ fn sample05() {
 #[test]
 fn sample06() {
     let input_file = PathBuf::from("./assets/ToS-s06.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -236,8 +265,8 @@ fn sample06() {
 #[test]
 fn sample07() {
     let input_file = PathBuf::from("./assets/ToS-s07.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -268,8 +297,8 @@ fn sample07() {
 #[test]
 fn sample08() {
     let input_file = PathBuf::from("./assets/ToS-s08.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -301,7 +330,7 @@ fn sample08() {
 fn sample09() {
     let input_file = PathBuf::from("./assets/ToS-s09.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -332,7 +361,7 @@ fn sample09() {
 fn sample10() {
     let input_file = PathBuf::from("./assets/ToS-s10.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -363,7 +392,7 @@ fn sample10() {
 fn sample11() {
     let input_file = PathBuf::from("./assets/ToS-s11.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -394,7 +423,7 @@ fn sample11() {
 fn sample12() {
     let input_file = PathBuf::from("./assets/ToS-s12.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -425,7 +454,7 @@ fn sample12() {
 fn sample13() {
     let input_file = PathBuf::from("./assets/ToS-s13.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -455,8 +484,8 @@ fn sample13() {
 #[test]
 fn sample14() {
     let input_file = PathBuf::from("./assets/ToS-s14.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -486,8 +515,8 @@ fn sample14() {
 #[test]
 fn sample15() {
     let input_file = PathBuf::from("./assets/ToS-s15.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -514,8 +543,8 @@ fn sample15() {
 #[test]
 fn sample16() {
     let input_file = PathBuf::from("./assets/ToS-s16.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -545,8 +574,8 @@ fn sample16() {
 #[test]
 fn sample17() {
     let input_file = PathBuf::from("./assets/ToS-s17.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -577,7 +606,7 @@ fn sample17() {
 fn sample18() {
     let input_file = PathBuf::from("./assets/ToS-s18.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -607,8 +636,8 @@ fn sample18() {
 #[test]
 fn sample19() {
     let input_file = PathBuf::from("./assets/ToS-s19.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -639,7 +668,7 @@ fn sample19() {
 fn sample20() {
     let input_file = PathBuf::from("./assets/ToS-s20.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -667,7 +696,7 @@ fn sample20() {
 fn sample21() {
     let input_file = PathBuf::from("./assets/ToS-s21.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -695,7 +724,7 @@ fn sample21() {
 fn sample22() {
     let input_file = PathBuf::from("./assets/ToS-s22.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -723,7 +752,7 @@ fn sample22() {
 fn sample23() {
     let input_file = PathBuf::from("./assets/ToS-s23.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -750,8 +779,8 @@ fn sample23() {
 #[test]
 fn sample24() {
     let input_file = PathBuf::from("./assets/ToS-s24.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -779,7 +808,7 @@ fn sample24() {
 fn sample25() {
     let input_file = PathBuf::from("./assets/ToS-s25.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -806,8 +835,8 @@ fn sample25() {
 #[test]
 fn sample26() {
     let input_file = PathBuf::from("./assets/ToS-s26.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -834,8 +863,8 @@ fn sample26() {
 #[test]
 fn sample27() {
     let input_file = PathBuf::from("./assets/ToS-s27.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -862,8 +891,8 @@ fn sample27() {
 #[test]
 fn sample28() {
     let input_file = PathBuf::from("./assets/ToS-s28.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -890,8 +919,8 @@ fn sample28() {
 #[test]
 fn sample29() {
     let input_file = PathBuf::from("./assets/ToS-s29.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -919,7 +948,7 @@ fn sample29() {
 fn sample30() {
     let input_file = PathBuf::from("./assets/ToS-s30.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -947,7 +976,7 @@ fn sample30() {
 fn sample31() {
     let input_file = PathBuf::from("./assets/ToS-s31.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -975,7 +1004,7 @@ fn sample31() {
 fn sample32() {
     let input_file = PathBuf::from("./assets/ToS-s32.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1003,7 +1032,7 @@ fn sample32() {
 fn sample33() {
     let input_file = PathBuf::from("./assets/ToS-s33.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1031,7 +1060,7 @@ fn sample33() {
 fn sample34() {
     let input_file = PathBuf::from("./assets/ToS-s34.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1058,8 +1087,8 @@ fn sample34() {
 #[test]
 fn sample35() {
     let input_file = PathBuf::from("./assets/ToS-s35.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1086,8 +1115,8 @@ fn sample35() {
 #[test]
 fn sample36() {
     let input_file = PathBuf::from("./assets/ToS-s36.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1114,8 +1143,8 @@ fn sample36() {
 #[test]
 fn sample37() {
     let input_file = PathBuf::from("./assets/ToS-s37.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1142,8 +1171,8 @@ fn sample37() {
 #[test]
 fn sample38() {
     let input_file = PathBuf::from("./assets/ToS-s38.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1170,8 +1199,8 @@ fn sample38() {
 #[test]
 fn sample39() {
     let input_file = PathBuf::from("./assets/ToS-s39.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1198,8 +1227,8 @@ fn sample39() {
 #[test]
 fn sample40() {
     let input_file = PathBuf::from("./assets/ToS-s40.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1226,8 +1255,8 @@ fn sample40() {
 #[test]
 fn sample41() {
     let input_file = PathBuf::from("./assets/ToS-s41.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1255,7 +1284,7 @@ fn sample41() {
 fn sample42() {
     let input_file = PathBuf::from("./assets/ToS-s42.h265");
     let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1282,8 +1311,8 @@ fn sample42() {
 #[test]
 fn sample43() {
     let input_file = PathBuf::from("./assets/ToS-s43.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1310,8 +1339,8 @@ fn sample43() {
 #[test]
 fn sample44() {
     let input_file = PathBuf::from("./assets/ToS-s44.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1338,8 +1367,8 @@ fn sample44() {
 #[test]
 fn sample45() {
     let input_file = PathBuf::from("./assets/ToS-s45.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1366,8 +1395,8 @@ fn sample45() {
 #[test]
 fn sample46() {
     let input_file = PathBuf::from("./assets/ToS-s46.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1394,8 +1423,8 @@ fn sample46() {
 #[test]
 fn sample47() {
     let input_file = PathBuf::from("./assets/ToS-s47.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1422,8 +1451,8 @@ fn sample47() {
 #[test]
 fn sample48() {
     let input_file = PathBuf::from("./assets/ToS-s48.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1450,8 +1479,8 @@ fn sample48() {
 #[test]
 fn sample49() {
     let input_file = PathBuf::from("./assets/ToS-s49.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1478,8 +1507,8 @@ fn sample49() {
 #[test]
 fn sample50() {
     let input_file = PathBuf::from("./assets/ToS-s50.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1506,8 +1535,8 @@ fn sample50() {
 #[test]
 fn sample51() {
     let input_file = PathBuf::from("./assets/ToS-s51.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1534,8 +1563,8 @@ fn sample51() {
 #[test]
 fn sample52() {
     let input_file = PathBuf::from("./assets/ToS-s52.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1562,8 +1591,8 @@ fn sample52() {
 #[test]
 fn sample53() {
     let input_file = PathBuf::from("./assets/ToS-s53.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1590,8 +1619,8 @@ fn sample53() {
 #[test]
 fn sample54() {
     let input_file = PathBuf::from("./assets/ToS-s54.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "N/A");
     assert_eq!(metadata.num_windows, 1);
@@ -1618,8 +1647,8 @@ fn sample54() {
 #[test]
 fn sample55() {
     let input_file = PathBuf::from("./assets/ToS-s55.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1646,8 +1675,8 @@ fn sample55() {
 #[test]
 fn sample56() {
     let input_file = PathBuf::from("./assets/ToS-s56.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1674,8 +1703,8 @@ fn sample56() {
 #[test]
 fn sample57() {
     let input_file = PathBuf::from("./assets/ToS-s57.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1702,8 +1731,8 @@ fn sample57() {
 #[test]
 fn sample58() {
     let input_file = PathBuf::from("./assets/ToS-s58.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1733,8 +1762,8 @@ fn sample58() {
 #[test]
 fn sample59() {
     let input_file = PathBuf::from("./assets/ToS-s59.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1764,8 +1793,8 @@ fn sample59() {
 #[test]
 fn sample60() {
     let input_file = PathBuf::from("./assets/ToS-s60.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, _) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, _) = run_test(&parser).unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1795,10 +1824,10 @@ fn sample60() {
 #[test]
 fn sample61() {
     let input_file = PathBuf::from("./assets/ToS-s61.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, json) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, json) = run_test(&parser).unwrap();
 
-    metadata.validate();
+    metadata.validate().unwrap();
 
     assert_eq!(metadata.profile, "B");
     assert_eq!(metadata.num_windows, 1);
@@ -1846,10 +1875,10 @@ fn sample61() {
 #[test]
 fn sample62() {
     let input_file = PathBuf::from("./assets/ToS-s62.h265");
-    let parser = Parser::new(Format::Raw, input_file, None, false, false);
-    let (metadata, json) = parser._test().unwrap();
+    let parser = Parser::new(Format::Raw, input_file, None, false, true);
+    let (metadata, json) = run_test(&parser).unwrap();
 
-    metadata.validate();
+    metadata.validate().unwrap();
 
     assert_eq!(metadata.profile, "A");
     assert_eq!(metadata.num_windows, 1);

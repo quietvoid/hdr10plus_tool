@@ -1,0 +1,18 @@
+[package]
+name = "hdr10plus"
+version = "1.0.0"
+edition = "2018"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitvec_helpers = "0.1.0"
+anyhow = "1.0"
+serde = { version = "1.0.126", features = ["derive"], optional = true }
+serde_json = { version = "1.0.64", features = ["preserve_order"], optional = true }
+hevc_parser = { version = "0.2.0", optional = true }
+
+[features]
+hevc = ["hevc_parser"]
+json = ["serde", "serde_json"]
