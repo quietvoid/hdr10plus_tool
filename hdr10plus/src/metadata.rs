@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use bitvec_helpers::{bitvec_reader::BitVecReader, bitvec_writer::BitVecWriter};
 
 const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
@@ -161,16 +161,16 @@ impl Hdr10PlusMetadata {
 
     pub fn validate(&self) -> Result<()> {
         // SMPTE ST-2094 Application 4, Version 1
-        if self.application_identifier != 4 {
-            bail!(
-                "Invalid application_identifier: {}",
-                self.application_identifier
-            );
-        }
-
-        if self.application_version != 1 {
-            bail!("Invalid application_version: {}", self.application_version);
-        }
+        ensure!(
+            self.application_identifier == 4,
+            "Invalid application_identifier: {}",
+            self.application_identifier
+        );
+        ensure!(
+            self.application_version == 1,
+            "Invalid application_version: {}",
+            self.application_version
+        );
 
         // For version 1
         if self.application_version == 1 {
@@ -178,17 +178,16 @@ impl Hdr10PlusMetadata {
         }
 
         // The value of targeted_system_display_maximum_luminance shall be in the range of 0 to 10000, inclusive
-        if self.targeted_system_display_maximum_luminance > 10000 {
-            bail!("Invalid targeted_system_display_maximum_luminance, should be at most 10 0000. Actual: {}", self.targeted_system_display_maximum_luminance);
-        }
+        ensure!(self.targeted_system_display_maximum_luminance <= 10000, "Invalid targeted_system_display_maximum_luminance, should be at most 10 0000. Actual: {}", self.targeted_system_display_maximum_luminance);
 
         // Profile B needs Bezier curve information and a non zero target display (for OOTF)
         if self.tone_mapping_flag {
-            if self.targeted_system_display_maximum_luminance == 0 {
-                bail!("Invalid targeted_system_display_maximum_luminance for profile B, must not be zero.");
-            }
-        } else if self.targeted_system_display_maximum_luminance != 0 {
-            bail!("Invalid targeted_system_display_maximum_luminance for profile A, must be zero.");
+            ensure!(self.targeted_system_display_maximum_luminance != 0, "Invalid targeted_system_display_maximum_luminance for profile B, must not be zero.");
+        } else {
+            ensure!(
+                self.targeted_system_display_maximum_luminance == 0,
+                "Invalid targeted_system_display_maximum_luminance for profile A, must be zero."
+            );
         }
 
         // Shall be under 100000, inclusive
@@ -197,12 +196,11 @@ impl Hdr10PlusMetadata {
         }
 
         // Shall be under 100000, inclusive
-        if self.average_maxrgb > 100_000 {
-            bail!(
-                "Invalid AverageMaxRGB value over 100 000: {}",
-                self.average_maxrgb
-            );
-        }
+        ensure!(
+            self.average_maxrgb <= 100_000,
+            "Invalid AverageMaxRGB value over 100 000: {}",
+            self.average_maxrgb
+        );
 
         // Shall be under 100000, inclusive
         DistributionMaxRgb::validate(
@@ -311,30 +309,26 @@ impl Hdr10PlusMetadata {
     }
 
     fn validate_v1(&self) -> Result<()> {
-        if self.num_windows != 1 {
-            bail!("Invalid num_windows: {}", self.num_windows);
-        }
-
-        if self.targeted_system_display_actual_peak_luminance_flag {
-            bail!(
-                "Invalid for version 1: targeted_system_display_actual_peak_luminance_flag {}",
-                self.targeted_system_display_actual_peak_luminance_flag
-            );
-        }
-
-        if self.mastering_display_actual_peak_luminance_flag {
-            bail!(
-                "Invalid for version 1: mastering_display_actual_peak_luminance_flag {}",
-                self.mastering_display_actual_peak_luminance_flag
-            );
-        }
-
-        if self.color_saturation_mapping_flag {
-            bail!(
-                "Invalid for version 1: color_saturation_mapping_flag {}",
-                self.color_saturation_mapping_flag
-            );
-        }
+        ensure!(
+            self.num_windows == 1,
+            "Invalid num_windows: {}",
+            self.num_windows
+        );
+        ensure!(
+            !self.targeted_system_display_actual_peak_luminance_flag,
+            "Invalid for version 1: targeted_system_display_actual_peak_luminance_flag {}",
+            self.targeted_system_display_actual_peak_luminance_flag
+        );
+        ensure!(
+            !self.mastering_display_actual_peak_luminance_flag,
+            "Invalid for version 1: mastering_display_actual_peak_luminance_flag {}",
+            self.mastering_display_actual_peak_luminance_flag
+        );
+        ensure!(
+            !self.color_saturation_mapping_flag,
+            "Invalid for version 1: color_saturation_mapping_flag {}",
+            self.color_saturation_mapping_flag
+        );
 
         Ok(())
     }
@@ -370,12 +364,11 @@ impl DistributionMaxRgb {
         // Distribution indexes should be equal to:
         // 9 indexes: [1, 5, 10, 25, 50, 75, 90, 95, 99]
         // 10 indexes: [1, 5, 10, 25, 50, 75, 90, 95, 98, 99]
-        if Self::distribution_index(list) != correct_indexes {
-            bail!(
-                "Invalid DistributionIndex values: {:?}",
-                Self::distribution_index(list)
-            );
-        }
+        ensure!(
+            Self::distribution_index(list) == correct_indexes,
+            "Invalid DistributionIndex values: {:?}",
+            Self::distribution_index(list)
+        );
 
         if !Self::distribution_values(list)
             .iter()
@@ -543,21 +536,23 @@ impl BezierCurve {
 
     fn validate(&self) -> Result<()> {
         // The value of knee_point_x shall be in the range of 0 to 1, and in multiples of 1/4095
-        if self.knee_point_x > 4096 {
-            bail!("Invalid knee point x: {}", self.knee_point_x);
-        }
+        ensure!(
+            self.knee_point_x <= 4095,
+            "Invalid knee point x: {}",
+            self.knee_point_x
+        );
+        ensure!(
+            self.knee_point_y <= 4095,
+            "Invalid knee point y: {}",
+            self.knee_point_y
+        );
 
-        if self.knee_point_y > 4096 {
-            bail!("Invalid knee point y: {}", self.knee_point_y);
-        }
-
-        // THe maximum value shall be 9
-        if self.num_bezier_curve_anchors > 9 {
-            bail!(
-                "Invalid number of Bezier curve anchors: {}",
-                self.num_bezier_curve_anchors
-            );
-        }
+        // The maximum value shall be 9
+        ensure!(
+            self.num_bezier_curve_anchors <= 9,
+            "Invalid number of Bezier curve anchors: {}",
+            self.num_bezier_curve_anchors
+        );
 
         // Shall be under 1024
         if !self.bezier_curve_anchors.iter().all(|&v| v < 1024) {

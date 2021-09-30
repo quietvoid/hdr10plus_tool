@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 
-use anyhow::{bail, Result};
+use anyhow::{ensure, Result};
 use bitvec_helpers::bitvec_writer::BitVecWriter;
-use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
 use hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
+use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
 
 use super::metadata::Hdr10PlusMetadata;
 use super::metadata_json::Hdr10PlusJsonMetadata;
@@ -22,9 +22,11 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
     let mut payload = metadata.encode(validate)?;
 
     // FIXME: This should probably be 1024 but not sure how to write a longer header
-    if payload.len() > 255 {
-        bail!("Payload too large: {} bytes", payload.len());
-    }
+    ensure!(
+        payload.len() <= 255,
+        "Payload too large: {} bytes",
+        payload.len()
+    );
 
     header_writer.write_n(&payload.len().to_be_bytes(), 8);
 

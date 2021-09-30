@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fs::File, io::Read, path::Path};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -269,23 +269,25 @@ impl TryFrom<&Hdr10PlusJsonMetadata> for Hdr10PlusMetadata {
         let lp = &jm.luminance_parameters;
         let dists = &lp.luminance_distributions;
 
-        if lp.max_scl.len() != 3 {
-            bail!("MaxScl must contain exactly 3 elements");
-        }
+        ensure!(
+            lp.max_scl.len() == 3,
+            "MaxScl must contain exactly 3 elements"
+        );
 
         let maxscl = [lp.max_scl[0], lp.max_scl[1], lp.max_scl[2]];
 
-        if dists.distribution_index.len() == dists.distribution_values.len() {
-            bail!("DistributionIndex and DistributionValue sizes don't match");
-        }
-
-        if dists.distribution_index.len() > 10 {
-            bail!("DistributionIndex size should be at most 10");
-        }
-
-        if dists.distribution_values.len() > 10 {
-            bail!("DistributionValues size should be at most 10");
-        }
+        ensure!(
+            dists.distribution_index.len() == dists.distribution_values.len(),
+            "DistributionIndex and DistributionValue sizes don't match"
+        );
+        ensure!(
+            dists.distribution_index.len() <= 10,
+            "DistributionIndex size should be at most 10"
+        );
+        ensure!(
+            dists.distribution_values.len() <= 10,
+            "DistributionValues size should be at most 10"
+        );
 
         let distribution_parsed = dists
             .distribution_index
