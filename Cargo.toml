@@ -6,7 +6,7 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
-hdr10plus = { path = "hdr10plus", features = ["hevc", "json"] }
+hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
 hevc_parser = "0.2.0"
 structopt = "0.3.21"
 serde_json = { version = "1.0.64", features = ["preserve_order"] }
