@@ -7,14 +7,14 @@ license = "MIT"
 
 [dependencies]
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
-hevc_parser = "0.2.0"
+hevc_parser = "0.2.1"
 structopt = "0.3.21"
 serde_json = { version = "1.0.64", features = ["preserve_order"] }
 indicatif = "0.16.2"
 regex = "1.5.4"
-bitvec = "0.20.4"
+bitvec = "0.22.3"
 bitvec_helpers = "0.1.0"
-rayon = "1.5.0"
+rayon = "1.5.1"
 
 [[bin]]
 name = "hdr10plus_tool"
