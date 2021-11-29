@@ -106,7 +106,7 @@ impl Injector {
                 last
             };
 
-            parser.split_nals(&chunk, &offsets, last, true);
+            parser.split_nals(&chunk, &offsets, last, true)?;
 
             chunk.clear();
 
@@ -252,7 +252,7 @@ impl Injector {
                     last
                 };
 
-                let nals = parser.split_nals(&chunk, &offsets, last, true);
+                let nals = parser.split_nals(&chunk, &offsets, last, true)?;
 
                 for (cur_index, nal) in nals.iter().enumerate() {
                     // AUDs

@@ -39,18 +39,22 @@ fn main() -> Result<()> {
     let verify = opt.verify;
     let validate = !opt.skip_validation;
 
-    match opt.cmd {
+    let res = match opt.cmd {
         Command::Extract {
             input,
             stdin,
             output,
-        } => extract_json(input, stdin, output, verify, validate)?,
+        } => extract_json(input, stdin, output, verify, validate),
         Command::Inject {
             input,
             json,
             output,
-        } => Injector::run(input, json, output, validate)?,
+        } => Injector::run(input, json, output, validate),
     };
+
+    if let Err(e) = res {
+        println!("{:?}", e);
+    }
 
     Ok(())
 }

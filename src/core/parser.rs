@@ -92,7 +92,7 @@ impl Parser {
         input: &Path,
         pb: Option<&ProgressBar>,
         parser: &mut HevcParser,
-    ) -> Result<Vec<Vec<u8>>, std::io::Error> {
+    ) -> Result<Vec<Vec<u8>>> {
         //BufReader & BufWriter
         let stdin = std::io::stdin();
         let mut reader = Box::new(stdin.lock()) as Box<dyn BufRead>;
@@ -163,15 +163,12 @@ impl Parser {
                 last
             };
 
-            let nals: Vec<NALUnit> = parser.split_nals(&chunk, &offsets, last, true);
+            let nals: Vec<NALUnit> = parser.split_nals(&chunk, &offsets, last, true)?;
 
             let new_sei = self.find_hdr10plus_sei(&chunk, nals);
 
             if final_sei_list.is_empty() && new_sei.is_empty() {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "File doesn't contain dynamic metadata, stopping.",
-                ));
+                bail!("File doesn't contain dynamic metadata, stopping.");
             } else if self.verify {
                 return Ok(vec![vec![1]]);
             }
