@@ -71,6 +71,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitvec_helpers"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "278069868c52e9231e05ad5f2f854608480cc90ff85ff101956fa6e55949c820"
+dependencies = [
+ "anyhow",
+ "bitvec",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -174,10 +184,10 @@ checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
 
 [[package]]
 name = "hdr10plus"
-version = "1.0.3"
+version = "1.1.0"
 dependencies = [
  "anyhow",
- "bitvec_helpers",
+ "bitvec_helpers 1.0.0",
  "hevc_parser",
  "serde",
  "serde_json",
@@ -185,10 +195,11 @@ dependencies = [
 
 [[package]]
 name = "hdr10plus_tool"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
+ "anyhow",
  "bitvec",
- "bitvec_helpers",
+ "bitvec_helpers 1.0.0",
  "hdr10plus",
  "hevc_parser",
  "indicatif",
@@ -223,7 +234,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ca0043feeef620907560842caa868113202a3f3198ed0352234e5de2d8e43d3"
 dependencies = [
  "anyhow",
- "bitvec_helpers",
+ "bitvec_helpers 0.1.1",
  "nom",
 ]
 

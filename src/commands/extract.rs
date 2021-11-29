@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::path::PathBuf;
 
 use super::{input_format, parser::Parser};
@@ -8,7 +9,7 @@ pub fn extract_json(
     output: Option<PathBuf>,
     verify: bool,
     validate: bool,
-) {
+) -> Result<()> {
     let input = match input {
         Some(input) => input,
         None => match stdin {
@@ -17,13 +18,12 @@ pub fn extract_json(
         },
     };
 
-    match input_format(&input) {
-        Ok(format) => {
-            let verify_default = if output.is_none() { true } else { verify };
+    let format = input_format(&input)?;
+    let verify_default = if output.is_none() { true } else { verify };
 
-            let parser = Parser::new(format, input, output, verify_default, validate);
-            parser.process_input();
-        }
-        Err(msg) => println!("{}", msg),
-    }
+    let parser = Parser::new(format, input, output, verify_default, validate);
+
+    parser.process_input()?;
+
+    Ok(())
 }

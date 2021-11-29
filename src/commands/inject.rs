@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
 
+use anyhow::{bail, Result};
+
 //use crate::dovi::get_aud;
 
 const OUT_NAL_HEADER: &[u8] = &[0, 0, 0, 1];
@@ -23,44 +25,45 @@ pub struct Injector {
 }
 
 impl Injector {
-    pub fn run(input: PathBuf, json: PathBuf, output: Option<PathBuf>, validate: bool) {
-        match input_format(&input) {
-            Ok(format) => {
-                if let Format::Raw = format {
-                    let output = match output {
-                        Some(path) => path,
-                        None => PathBuf::from("injected_output.hevc"),
-                    };
+    pub fn run(
+        input: PathBuf,
+        json: PathBuf,
+        output: Option<PathBuf>,
+        validate: bool,
+    ) -> Result<()> {
+        let format = input_format(&input)?;
 
-                    let mut injector = Injector::new(input, json, output);
-                    let mut parser = HevcParser::default();
+        if let Format::Raw = format {
+            let output = match output {
+                Some(path) => path,
+                None => PathBuf::from("injected_output.hevc"),
+            };
 
-                    injector.process_input(&mut parser, format);
-                    parser.finish();
+            let mut injector = Injector::new(input, json, output)?;
+            let mut parser = HevcParser::default();
 
-                    let frames = parser.ordered_frames();
-                    let nals = parser.get_nals();
+            injector.process_input(&mut parser, format)?;
+            parser.finish();
 
-                    match injector.interleave_sei_nalus(nals, frames, validate) {
-                        Ok(_) => (),
-                        Err(e) => panic!("{}", e),
-                    }
-                } else {
-                    panic!("unsupported format");
-                }
-            }
-            Err(msg) => println!("{}", msg),
+            let frames = parser.ordered_frames();
+            let nals = parser.get_nals();
+
+            injector.interleave_sei_nalus(nals, frames, validate)?;
+        } else {
+            bail!("unsupported format");
         }
+
+        Ok(())
     }
 
-    fn process_input(&self, parser: &mut HevcParser, format: Format) {
+    fn process_input(&self, parser: &mut HevcParser, format: Format) -> Result<()> {
         println!("Processing input video for frame order info...");
         stdout().flush().ok();
 
-        let pb = initialize_progress_bar(&format, &self.input);
+        let pb = initialize_progress_bar(&format, &self.input)?;
 
         //BufReader & BufWriter
-        let file = File::open(&self.input).unwrap();
+        let file = File::open(&self.input)?;
         let mut reader = Box::new(BufReader::with_capacity(100_000, file));
 
         let chunk_size = 100_000;
@@ -121,9 +124,11 @@ impl Injector {
         }
 
         pb.finish_and_clear();
+
+        Ok(())
     }
 
-    pub fn new(input: PathBuf, json: PathBuf, output: PathBuf) -> Injector {
+    pub fn new(input: PathBuf, json: PathBuf, output: PathBuf) -> Result<Injector> {
         let mut injector = Injector {
             input,
             json,
@@ -131,10 +136,10 @@ impl Injector {
             metadata_list: None,
         };
 
-        let metadata_root = MetadataJsonRoot::from_file(&injector.json).unwrap();
+        let metadata_root = MetadataJsonRoot::from_file(&injector.json)?;
         injector.metadata_list = Some(metadata_root.scene_info);
 
-        injector
+        Ok(injector)
     }
 
     fn interleave_sei_nalus(
@@ -142,7 +147,7 @@ impl Injector {
         nals: &[NALUnit],
         frames: &[Frame],
         validate: bool,
-    ) -> Result<(), std::io::Error> {
+    ) -> Result<()> {
         if let Some(ref mut metadata_list) = self.metadata_list {
             let mismatched_length = if frames.len() != metadata_list.len() {
                 println!(
@@ -189,7 +194,7 @@ impl Injector {
             println!("Rewriting file with interleaved HDR10+ NALUs..");
             stdout().flush().ok();
 
-            let pb = initialize_progress_bar(&Format::Raw, &self.input);
+            let pb = initialize_progress_bar(&Format::Raw, &self.input)?;
             let mut parser = HevcParser::default();
 
             let chunk_size = 100_000;
@@ -200,7 +205,7 @@ impl Injector {
             let mut end: Vec<u8> = Vec::with_capacity(chunk_size);
 
             //BufReader & BufWriter
-            let file = File::open(&self.input).unwrap();
+            let file = File::open(&self.input)?;
             let mut reader = Box::new(BufReader::with_capacity(100_000, file));
             let mut writer = BufWriter::with_capacity(
                 chunk_size,
@@ -272,11 +277,7 @@ impl Injector {
                         // Otherwise, write the same data as previous
                         if metadata_index < metadata_list.len() {
                             let meta = &mut metadata_list[metadata_index];
-                            let data = match hdr10plus::hevc::encode_hevc_from_json(meta, validate)
-                            {
-                                Ok(v) => v,
-                                Err(e) => panic!("{:?}", e),
-                            };
+                            let data = hdr10plus::hevc::encode_hevc_from_json(meta, validate)?;
 
                             writer.write_all(OUT_NAL_HEADER)?;
                             writer.write_all(&data)?;

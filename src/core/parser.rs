@@ -2,6 +2,7 @@ use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
+use anyhow::{bail, Result};
 use indicatif::ProgressBar;
 
 use hevc_parser::hevc::NAL_SEI_PREFIX;
@@ -50,43 +51,40 @@ impl Parser {
         }
     }
 
-    pub fn process_input(&self) {
-        let pb = super::initialize_progress_bar(&self.format, &self.input);
+    pub fn process_input(&self) -> Result<()> {
+        let pb = super::initialize_progress_bar(&self.format, &self.input)?;
 
         let mut parser = HevcParser::default();
 
         let result = match self.format {
-            Format::Matroska => panic!("unsupported format matroska"),
-            _ => self.parse_metadata(&self.input, Some(&pb), &mut parser),
+            Format::Matroska => bail!("unsupported format matroska"),
+            _ => self.parse_metadata(&self.input, Some(&pb), &mut parser)?,
         };
 
         pb.finish_and_clear();
 
-        match result {
-            Ok(vec) => {
-                if vec.is_empty() {
-                    println!("No metadata found in the input.");
-                } else if self.verify && vec[0][0] == 1 && vec[0].len() == 1 {
-                    //Match returned vec to check for --verify
-                    println!("Dynamic HDR10+ metadata detected.");
-                } else {
-                    let mut final_metadata = Self::llc_read_metadata(vec, self.validate);
+        if result.is_empty() {
+            bail!("No metadata found in the input.");
+        } else if self.verify && result[0][0] == 1 && result[0].len() == 1 {
+            //Match returned vec to check for --verify
+            println!("Dynamic HDR10+ metadata detected.");
+        } else {
+            let mut final_metadata = Self::llc_read_metadata(result, self.validate)?;
 
-                    //Sucessful parse & no --verify
-                    if !final_metadata.is_empty() {
-                        let frames = parser.ordered_frames();
+            //Sucessful parse & no --verify
+            if !final_metadata.is_empty() {
+                let frames = parser.ordered_frames();
 
-                        // Reorder to display output order
-                        self.reorder_metadata(frames, &mut final_metadata);
+                // Reorder to display output order
+                self.reorder_metadata(frames, &mut final_metadata);
 
-                        self.write_json(final_metadata)
-                    } else {
-                        println!("Failed reading parsed metadata.");
-                    }
-                }
+                self.write_json(final_metadata)?;
+            } else {
+                bail!("Failed reading parsed metadata.");
             }
-            Err(e) => println!("{}", e),
         }
+
+        Ok(())
     }
 
     pub fn parse_metadata(
@@ -128,21 +126,18 @@ impl Parser {
                 chunk.extend_from_slice(&main_buf[..read_bytes]);
 
                 loop {
-                    match reader.read(&mut sec_buf) {
-                        Ok(num) => {
-                            if num > 0 {
-                                read_bytes += num;
+                    let num = reader.read(&mut sec_buf)?;
 
-                                chunk.extend_from_slice(&sec_buf[..num]);
+                    if num > 0 {
+                        read_bytes += num;
 
-                                if read_bytes >= chunk_size {
-                                    break;
-                                }
-                            } else {
-                                break;
-                            }
+                        chunk.extend_from_slice(&sec_buf[..num]);
+
+                        if read_bytes >= chunk_size {
+                            break;
                         }
-                        Err(e) => panic!("{:?}", e),
+                    } else {
+                        break;
                     }
                 }
             } else if read_bytes < chunk_size {
@@ -219,7 +214,7 @@ impl Parser {
         found_list
     }
 
-    pub fn llc_read_metadata(input: Vec<Vec<u8>>, validate: bool) -> Vec<MetadataFrame> {
+    pub fn llc_read_metadata(input: Vec<Vec<u8>>, validate: bool) -> Result<Vec<MetadataFrame>> {
         print!("Reading parsed dynamic metadata... ");
         stdout().flush().ok();
 
@@ -230,13 +225,11 @@ impl Parser {
             let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(data);
 
             // Parse metadata
-            let metadata = Hdr10PlusMetadata::parse(bytes);
+            let metadata = Hdr10PlusMetadata::parse(bytes)?;
 
             // Validate values
             if validate {
-                if let Err(e) = metadata.validate() {
-                    panic!("{:?}", e);
-                }
+                metadata.validate()?;
             }
 
             let metadata_frame = MetadataFrame {
@@ -250,10 +243,10 @@ impl Parser {
 
         println!("Done.");
 
-        complete_metadata
+        Ok(complete_metadata)
     }
 
-    fn write_json(&self, metadata: Vec<MetadataFrame>) {
+    fn write_json(&self, metadata: Vec<MetadataFrame>) -> Result<()> {
         match &self.output {
             Some(path) => {
                 let save_file = File::create(path).expect("Can't create file");
@@ -266,19 +259,16 @@ impl Parser {
                     metadata.iter().map(|mf| &mf.metadata).collect();
                 let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
 
-                assert!(writeln!(
-                    writer,
-                    "{}",
-                    serde_json::to_string_pretty(&final_json).unwrap()
-                )
-                .is_ok());
+                writeln!(writer, "{}", serde_json::to_string_pretty(&final_json)?)?;
 
                 println!("Done.");
 
-                writer.flush().ok();
+                writer.flush()?;
             }
-            None => panic!("Output path required!"),
+            None => bail!("Output path required!"),
         }
+
+        Ok(())
     }
 
     pub fn reorder_metadata(&self, frames: &[Frame], metadata: &mut Vec<MetadataFrame>) {

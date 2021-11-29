@@ -1,3 +1,4 @@
+use anyhow::{bail, format_err, Result};
 use regex::Regex;
 use std::path::Path;
 use structopt::StructOpt;
@@ -32,7 +33,7 @@ pub enum Format {
     Matroska,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let opt = Opt::from_args();
 
     let verify = opt.verify;
@@ -43,19 +44,23 @@ fn main() {
             input,
             stdin,
             output,
-        } => extract_json(input, stdin, output, verify, validate),
+        } => extract_json(input, stdin, output, verify, validate)?,
         Command::Inject {
             input,
             json,
             output,
-        } => Injector::run(input, json, output, validate),
-    }
+        } => Injector::run(input, json, output, validate)?,
+    };
+
+    Ok(())
 }
 
-fn input_format(input: &Path) -> Result<Format, &str> {
-    let regex = Regex::new(r"\.(hevc|.?265|mkv)").unwrap();
+fn input_format(input: &Path) -> Result<Format> {
+    let regex = Regex::new(r"\.(hevc|.?265|mkv)")?;
     let file_name = match input.file_name() {
-        Some(file_name) => file_name.to_str().unwrap(),
+        Some(file_name) => file_name
+            .to_str()
+            .ok_or_else(|| format_err!("Invalid file name"))?,
         None => "",
     };
 
@@ -68,11 +73,11 @@ fn input_format(input: &Path) -> Result<Format, &str> {
             Ok(Format::Raw)
         }
     } else if file_name.is_empty() {
-        Err("Missing input.")
+        bail!("Missing input.")
     } else if !input.is_file() {
-        Err("Input file doesn't exist.")
+        bail!("Input file doesn't exist.")
     } else {
-        Err("Invalid input file type.")
+        bail!("Invalid input file type.")
     }
 }
 

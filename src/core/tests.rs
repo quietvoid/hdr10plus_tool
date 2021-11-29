@@ -1,23 +1,22 @@
 use std::path::PathBuf;
 
+use anyhow::{bail, Result};
+use hevc_parser::HevcParser;
+use serde_json::{json, Value};
+
 use hdr10plus::{
     metadata::{DistributionMaxRgb, Hdr10PlusMetadata},
     metadata_json::generate_json,
 };
-use hevc_parser::HevcParser;
-use serde_json::{json, Value};
 
 use super::{parser, Format};
-use parser::{MetadataFrame, Parser, TOOL_NAME, TOOL_VERSION};
+use parser::{Parser, TOOL_NAME, TOOL_VERSION};
 
-pub fn run_test(parser: &Parser) -> Option<(Hdr10PlusMetadata, Value)> {
-    let mut metadata: Vec<MetadataFrame> = Vec::new();
+pub fn run_test(parser: &Parser) -> Result<(Hdr10PlusMetadata, Value)> {
     let mut hevc_parser = HevcParser::default();
 
-    match parser.parse_metadata(&parser.input, None, &mut hevc_parser) {
-        Ok(vec) => metadata = Parser::llc_read_metadata(vec, parser.validate),
-        Err(e) => println!("{}", e),
-    }
+    let parsed = parser.parse_metadata(&parser.input, None, &mut hevc_parser)?;
+    let mut metadata = Parser::llc_read_metadata(parsed, parser.validate)?;
 
     if !metadata.is_empty() {
         let first_decoded_metadata = metadata[0].metadata.clone();
@@ -30,9 +29,9 @@ pub fn run_test(parser: &Parser) -> Option<(Hdr10PlusMetadata, Value)> {
         let list: Vec<&Hdr10PlusMetadata> = metadata.iter().map(|mf| &mf.metadata).collect();
         let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
 
-        Some((first_decoded_metadata, final_json))
+        Ok((first_decoded_metadata, final_json))
     } else {
-        None
+        bail!("No metadata found!");
     }
 }
 

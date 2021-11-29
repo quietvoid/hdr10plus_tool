@@ -1,3 +1,4 @@
+use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{fs::File, path::Path};
 
@@ -8,7 +9,7 @@ pub mod parser;
 #[cfg(test)]
 mod tests;
 
-pub fn initialize_progress_bar(format: &Format, input: &Path) -> ProgressBar {
+pub fn initialize_progress_bar(format: &Format, input: &Path) -> Result<ProgressBar> {
     let pb: ProgressBar;
     let bytes_count;
 
@@ -18,8 +19,8 @@ pub fn initialize_progress_bar(format: &Format, input: &Path) -> ProgressBar {
         let file = File::open(input).expect("No file found");
 
         //Info for indicatif ProgressBar
-        let file_meta = file.metadata();
-        bytes_count = file_meta.unwrap().len() / 100_000_000;
+        let file_meta = file.metadata()?;
+        bytes_count = file_meta.len() / 100_000_000;
 
         pb = ProgressBar::new(bytes_count);
         pb.set_style(
@@ -27,5 +28,5 @@ pub fn initialize_progress_bar(format: &Format, input: &Path) -> ProgressBar {
         );
     }
 
-    pb
+    Ok(pb)
 }

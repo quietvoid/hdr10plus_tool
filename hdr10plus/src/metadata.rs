@@ -86,7 +86,7 @@ pub struct BezierCurve {
 }
 
 impl Hdr10PlusMetadata {
-    pub fn parse(data: Vec<u8>) -> Hdr10PlusMetadata {
+    pub fn parse(data: Vec<u8>) -> Result<Hdr10PlusMetadata> {
         let mut reader = BitVecReader::new(data);
 
         let mut meta = Hdr10PlusMetadata {
@@ -103,7 +103,7 @@ impl Hdr10PlusMetadata {
             let mut processing_windows = Vec::new();
 
             for _ in 1..meta.num_windows {
-                let pw = ProcessingWindow::parse(&mut reader);
+                let pw = ProcessingWindow::parse(&mut reader)?;
                 processing_windows.push(pw);
             }
 
@@ -112,7 +112,7 @@ impl Hdr10PlusMetadata {
 
         meta.targeted_system_display_maximum_luminance = reader.get_n(27);
 
-        meta.targeted_system_display_actual_peak_luminance_flag = reader.get();
+        meta.targeted_system_display_actual_peak_luminance_flag = reader.get()?;
         if meta.targeted_system_display_actual_peak_luminance_flag {
             let atsd = ActualTargetedSystemDisplay::parse(&mut reader);
             meta.actual_targeted_system_display = Some(atsd);
@@ -134,14 +134,14 @@ impl Hdr10PlusMetadata {
             meta.fraction_bright_pixels = reader.get_n(10);
         }
 
-        meta.mastering_display_actual_peak_luminance_flag = reader.get();
+        meta.mastering_display_actual_peak_luminance_flag = reader.get()?;
         if meta.mastering_display_actual_peak_luminance_flag {
             let amd = ActualMasteringDisplay::parse(&mut reader);
             meta.actual_mastering_display = Some(amd);
         }
 
         for _ in 0..meta.num_windows {
-            meta.tone_mapping_flag = reader.get();
+            meta.tone_mapping_flag = reader.get()?;
 
             if meta.tone_mapping_flag {
                 let bc = BezierCurve::parse(&mut reader);
@@ -149,14 +149,14 @@ impl Hdr10PlusMetadata {
             }
         }
 
-        meta.color_saturation_mapping_flag = reader.get();
+        meta.color_saturation_mapping_flag = reader.get()?;
         if meta.color_saturation_mapping_flag {
             meta.color_saturation_weight = reader.get_n(6);
         }
 
         meta.set_profile();
 
-        meta
+        Ok(meta)
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -390,8 +390,8 @@ impl DistributionMaxRgb {
 }
 
 impl ProcessingWindow {
-    pub fn parse(reader: &mut BitVecReader) -> ProcessingWindow {
-        ProcessingWindow {
+    pub fn parse(reader: &mut BitVecReader) -> Result<ProcessingWindow> {
+        Ok(ProcessingWindow {
             window_upper_left_corner_x: reader.get_n(16),
             window_upper_left_corner_y: reader.get_n(16),
             window_lower_right_corner_x: reader.get_n(16),
@@ -402,8 +402,8 @@ impl ProcessingWindow {
             semimajor_axis_internal_ellipse: reader.get_n(16),
             semimajor_axis_external_ellipse: reader.get_n(16),
             semiminor_axis_external_ellipse: reader.get_n(16),
-            overlap_process_option: reader.get(),
-        }
+            overlap_process_option: reader.get()?,
+        })
     }
 
     pub fn encode(&self, writer: &mut BitVecWriter) {
