@@ -5,7 +5,7 @@ authors = ["quietvoid"]
 edition = "2018"
 license = "MIT"
 description = "HDR10+ metadata parsing and writing"
-repository = "https://github.com/quietvoid/hdr10plus_tool"
+repository = "https://github.com/quietvoid/hdr10plus_tool/tree/master/hdr10plus"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
