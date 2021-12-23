@@ -201,30 +201,32 @@ impl Parser {
 
         for nal in nals {
             if let NAL_SEI_PREFIX = nal.nal_type {
-                let sei = SeiMessage::from_bytes(&data[nal.start..nal.end])?;
+                let sei_payload = &data[nal.start..nal.end];
 
-                if sei.payload_type == USER_DATA_REGISTERED_ITU_T_35 {
-                    let mut itu_t35_bytes = &data[nal.start..nal.end];
+                if sei_payload.len() >= 4 {
+                    let sei = SeiMessage::from_bytes(sei_payload)?;
 
-                    if itu_t35_bytes.len() >= 7 {
+                    if sei.payload_type == USER_DATA_REGISTERED_ITU_T_35 {
                         // FIXME: Not sure why 4 bytes..
-                        itu_t35_bytes = &itu_t35_bytes[4..];
+                        let itu_t35_bytes = &sei_payload[4..];
 
-                        let itu_t_t35_country_code = itu_t35_bytes[0];
-                        let itu_t_t35_terminal_provider_code =
-                            u16::from_be_bytes(itu_t35_bytes[1..3].try_into()?);
-                        let itu_t_t35_terminal_provider_oriented_code =
-                            u16::from_be_bytes(itu_t35_bytes[3..5].try_into()?);
+                        if itu_t35_bytes.len() >= 7 {
+                            let itu_t_t35_country_code = itu_t35_bytes[0];
+                            let itu_t_t35_terminal_provider_code =
+                                u16::from_be_bytes(itu_t35_bytes[1..3].try_into()?);
+                            let itu_t_t35_terminal_provider_oriented_code =
+                                u16::from_be_bytes(itu_t35_bytes[3..5].try_into()?);
 
-                        if itu_t_t35_country_code == 0xB5
-                            && itu_t_t35_terminal_provider_code == 0x003C
-                            && itu_t_t35_terminal_provider_oriented_code == 0x0001
-                        {
-                            let application_identifier = itu_t35_bytes[5];
-                            let application_version = itu_t35_bytes[6];
+                            if itu_t_t35_country_code == 0xB5
+                                && itu_t_t35_terminal_provider_code == 0x003C
+                                && itu_t_t35_terminal_provider_oriented_code == 0x0001
+                            {
+                                let application_identifier = itu_t35_bytes[5];
+                                let application_version = itu_t35_bytes[6];
 
-                            if application_identifier == 4 && application_version == 1 {
-                                found_list.push(itu_t35_bytes.to_vec());
+                                if application_identifier == 4 && application_version == 1 {
+                                    found_list.push(itu_t35_bytes.to_vec());
+                                }
                             }
                         }
                     }
