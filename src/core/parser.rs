@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
@@ -5,8 +6,8 @@ use std::{fs::File, path::Path};
 use anyhow::{bail, Result};
 use indicatif::ProgressBar;
 
-use hevc_parser::hevc::NAL_SEI_PREFIX;
-use hevc_parser::hevc::{Frame, NALUnit};
+use hevc_parser::hevc::{Frame, NALUnit, SeiMessage};
+use hevc_parser::hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
 use hevc_parser::HevcParser;
 
 use hdr10plus::metadata::Hdr10PlusMetadata;
@@ -16,8 +17,6 @@ use super::Format;
 
 pub const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-const HDR10PLUS_SEI_HEADER: &[u8] = &[78, 1, 4];
 
 pub struct Parser {
     pub format: Format,
@@ -165,7 +164,7 @@ impl Parser {
 
             let nals: Vec<NALUnit> = parser.split_nals(&chunk, &offsets, last, true)?;
 
-            let new_sei = self.find_hdr10plus_sei(&chunk, nals);
+            let new_sei = self.find_hdr10plus_sei(&chunk, nals)?;
 
             if final_sei_list.is_empty() && new_sei.is_empty() {
                 bail!("File doesn't contain dynamic metadata, stopping.");
@@ -197,18 +196,43 @@ impl Parser {
         Ok(final_sei_list)
     }
 
-    pub fn find_hdr10plus_sei(&self, data: &[u8], nals: Vec<NALUnit>) -> Vec<Vec<u8>> {
+    pub fn find_hdr10plus_sei(&self, data: &[u8], nals: Vec<NALUnit>) -> Result<Vec<Vec<u8>>> {
         let mut found_list = Vec::new();
 
         for nal in nals {
             if let NAL_SEI_PREFIX = nal.nal_type {
-                if let HDR10PLUS_SEI_HEADER = &data[nal.start..nal.start + 3] {
-                    found_list.push(data[nal.start + 4..nal.end].to_vec());
+                let sei = SeiMessage::from_bytes(&data[nal.start..nal.end])?;
+
+                if sei.payload_type == USER_DATA_REGISTERED_ITU_T_35 {
+                    let mut itu_t35_bytes = &data[nal.start..nal.end];
+
+                    if itu_t35_bytes.len() >= 7 {
+                        // FIXME: Not sure why 4 bytes..
+                        itu_t35_bytes = &itu_t35_bytes[4..];
+
+                        let itu_t_t35_country_code = itu_t35_bytes[0];
+                        let itu_t_t35_terminal_provider_code =
+                            u16::from_be_bytes(itu_t35_bytes[1..3].try_into()?);
+                        let itu_t_t35_terminal_provider_oriented_code =
+                            u16::from_be_bytes(itu_t35_bytes[3..5].try_into()?);
+
+                        if itu_t_t35_country_code == 0xB5
+                            && itu_t_t35_terminal_provider_code == 0x003C
+                            && itu_t_t35_terminal_provider_oriented_code == 0x0001
+                        {
+                            let application_identifier = itu_t35_bytes[5];
+                            let application_version = itu_t35_bytes[6];
+
+                            if application_identifier == 4 && application_version == 1 {
+                                found_list.push(itu_t35_bytes.to_vec());
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        found_list
+        Ok(found_list)
     }
 
     pub fn llc_read_metadata(input: Vec<Vec<u8>>, validate: bool) -> Result<Vec<MetadataFrame>> {
