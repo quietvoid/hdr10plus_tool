@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
@@ -6,14 +5,14 @@ use std::{fs::File, path::Path};
 use anyhow::{bail, Result};
 use indicatif::ProgressBar;
 
-use hevc_parser::hevc::{Frame, NALUnit, SeiMessage};
-use hevc_parser::hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
+use hevc_parser::hevc::NAL_SEI_PREFIX;
+use hevc_parser::hevc::{Frame, NALUnit};
 use hevc_parser::HevcParser;
 
 use hdr10plus::metadata::Hdr10PlusMetadata;
 use hdr10plus::metadata_json::generate_json;
 
-use super::Format;
+use super::{is_st2094_40_sei, Format};
 
 pub const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -203,33 +202,8 @@ impl Parser {
             if let NAL_SEI_PREFIX = nal.nal_type {
                 let sei_payload = &data[nal.start..nal.end];
 
-                if sei_payload.len() >= 4 {
-                    let sei = SeiMessage::from_bytes(sei_payload)?;
-
-                    if sei.payload_type == USER_DATA_REGISTERED_ITU_T_35 {
-                        // FIXME: Not sure why 4 bytes..
-                        let itu_t35_bytes = &sei_payload[4..];
-
-                        if itu_t35_bytes.len() >= 7 {
-                            let itu_t_t35_country_code = itu_t35_bytes[0];
-                            let itu_t_t35_terminal_provider_code =
-                                u16::from_be_bytes(itu_t35_bytes[1..3].try_into()?);
-                            let itu_t_t35_terminal_provider_oriented_code =
-                                u16::from_be_bytes(itu_t35_bytes[3..5].try_into()?);
-
-                            if itu_t_t35_country_code == 0xB5
-                                && itu_t_t35_terminal_provider_code == 0x003C
-                                && itu_t_t35_terminal_provider_oriented_code == 0x0001
-                            {
-                                let application_identifier = itu_t35_bytes[5];
-                                let application_version = itu_t35_bytes[6];
-
-                                if application_identifier == 4 && application_version == 1 {
-                                    found_list.push(itu_t35_bytes.to_vec());
-                                }
-                            }
-                        }
-                    }
+                if is_st2094_40_sei(sei_payload)? {
+                    found_list.push(sei_payload[4..].to_vec());
                 }
             }
         }

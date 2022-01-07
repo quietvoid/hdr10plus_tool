@@ -9,6 +9,8 @@ use anyhow::{bail, Result};
 const OUT_NAL_HEADER: &[u8] = &[0, 0, 0, 1];
 use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
 
+use crate::core::is_st2094_40_sei;
+
 use super::{initialize_progress_bar, input_format, Format};
 
 use hevc_parser::hevc::*;
@@ -77,6 +79,8 @@ impl Injector {
 
         let mut offsets = Vec::with_capacity(2048);
 
+        let mut already_checked_for_hdr10plus = false;
+
         while let Ok(n) = reader.read(&mut main_buf) {
             let read_bytes = n;
             if read_bytes == 0 && end.is_empty() && chunk.is_empty() {
@@ -106,7 +110,21 @@ impl Injector {
                 last
             };
 
-            parser.split_nals(&chunk, &offsets, last, true)?;
+            if !already_checked_for_hdr10plus {
+                let nals = parser.split_nals(&chunk, &offsets, last, true)?;
+
+                let contains_hdr10plus = nals.iter().any(|nal| {
+                    nal.nal_type == NAL_SEI_PREFIX
+                        && is_st2094_40_sei(&chunk[nal.start..nal.end]).unwrap_or(false)
+                });
+
+                if contains_hdr10plus {
+                    already_checked_for_hdr10plus = true;
+                    println!("\nWarning: Input file already has HDR10+ metadata SEIs, they will be replaced.");
+                }
+            } else {
+                parser.split_nals(&chunk, &offsets, last, true)?;
+            }
 
             chunk.clear();
 
@@ -118,6 +136,10 @@ impl Injector {
             consumed += read_bytes;
 
             if consumed >= 100_000_000 {
+                if !already_checked_for_hdr10plus {
+                    already_checked_for_hdr10plus = true;
+                }
+
                 pb.inc(1);
                 consumed = 0;
             }
@@ -260,8 +282,13 @@ impl Injector {
                     //    continue;
                     //}
 
-                    writer.write_all(OUT_NAL_HEADER)?;
-                    writer.write_all(&chunk[nal.start..nal.end])?;
+                    if nal.nal_type == NAL_SEI_PREFIX
+                        && is_st2094_40_sei(&chunk[nal.start..nal.end])?
+                    {
+                    } else {
+                        writer.write_all(OUT_NAL_HEADER)?;
+                        writer.write_all(&chunk[nal.start..nal.end])?;
+                    }
 
                     let global_index = nals_parsed + cur_index;
 
