@@ -1,70 +1,57 @@
 pub mod extract;
 pub mod inject;
 
+use clap::Parser;
 use std::path::PathBuf;
-use structopt::StructOpt;
 
 use super::core::{initialize_progress_bar, parser};
 use super::{input_format, Format};
 
-#[derive(StructOpt, Debug)]
-#[structopt(
-    name = "hdr10plus_tool",
-    about = "CLI utility to work with HDR10+ in HEVC files"
-)]
+#[derive(Parser, Debug)]
 pub enum Command {
     Extract {
-        #[structopt(
-            name = "input",
-            short = "i",
+        #[clap(
+            short = 'i',
             long,
             help = "Sets the input file to use",
             long,
             conflicts_with = "stdin",
-            conflicts_with = "cmd",
             parse(from_os_str)
         )]
         input: Option<PathBuf>,
 
-        #[structopt(
-            help = "Uses stdin as input data",
-            conflicts_with = "input",
-            conflicts_with = "cmd",
-            parse(from_os_str)
-        )]
+        #[clap(help = "Uses stdin as input data", parse(from_os_str))]
         stdin: Option<PathBuf>,
 
-        #[structopt(
+        #[clap(
             long,
-            short = "o",
+            short = 'o',
             help = "Sets the output JSON file to use",
-            conflicts_with = "cmd",
             parse(from_os_str)
         )]
         output: Option<PathBuf>,
     },
 
     Inject {
-        #[structopt(
-            name = "input",
+        #[clap(
             long,
-            short = "i",
+            short = 'i',
             help = "Sets the input HEVC file to use",
             parse(from_os_str)
         )]
         input: PathBuf,
 
-        #[structopt(
+        #[clap(
             long,
-            short = "j",
+            short = 'j',
             help = "Sets the input JSON file to use",
             parse(from_os_str)
         )]
         json: PathBuf,
 
-        #[structopt(
+        #[clap(
             long,
-            short = "o",
+            short = 'o',
             help = "Output HEVC file location",
             parse(from_os_str)
         )]

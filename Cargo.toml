@@ -1,6 +1,6 @@
 [package]
 name = "hdr10plus_tool"
-version = "1.2.1"
+version = "1.2.2"
 authors = ["quietvoid"]
 edition = "2018"
 license = "MIT"
@@ -9,13 +9,13 @@ license = "MIT"
 bitvec_helpers = "1.0.0"
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
 hevc_parser = "0.3.1"
-structopt = "0.3.21"
-serde_json = { version = "1.0.64", features = ["preserve_order"] }
+clap = { version = "3.0.5", features = ["derive", "wrap_help"] }
+serde_json = { version = "1.0.73", features = ["preserve_order"] }
 indicatif = "0.16.2"
 regex = "1.5.4"
 bitvec = "0.22.3"
 rayon = "1.5.1"
-anyhow = "1.0.45"
+anyhow = "1.0.51"
 
 [[bin]]
 name = "hdr10plus_tool"

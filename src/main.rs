@@ -1,7 +1,7 @@
 use anyhow::{bail, format_err, Result};
+use clap::Parser;
 use regex::Regex;
 use std::path::Path;
-use structopt::StructOpt;
 
 mod commands;
 mod core;
@@ -10,19 +10,16 @@ use commands::{extract, inject, Command};
 use extract::extract_json;
 use inject::Injector;
 
-#[derive(StructOpt, Debug)]
-#[structopt(
-    name = "hdr10plus_tool",
-    about = "Parses HDR10+ dynamic metadata in HEVC video files"
-)]
+#[derive(Parser, Debug)]
+#[clap(name = env!("CARGO_PKG_NAME"), about = "Parses HDR10+ dynamic metadata in HEVC video files", author = "quietvoid", version = env!("CARGO_PKG_VERSION"))]
 struct Opt {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     cmd: Command,
 
-    #[structopt(long, help = "Checks if input file contains dynamic metadata")]
+    #[clap(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
 
-    #[structopt(long, help = "Skip profile conformity validation")]
+    #[clap(long, help = "Skip profile conformity validation")]
     skip_validation: bool,
 }
 
@@ -34,7 +31,7 @@ pub enum Format {
 }
 
 fn main() -> Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let verify = opt.verify;
     let validate = !opt.skip_validation;
