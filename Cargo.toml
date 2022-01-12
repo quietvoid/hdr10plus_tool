@@ -2,20 +2,21 @@
 name = "hdr10plus_tool"
 version = "1.2.2"
 authors = ["quietvoid"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56.0"
 license = "MIT"
 
 [dependencies]
-bitvec_helpers = "1.0.0"
+bitvec_helpers = "1.0.1"
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
-hevc_parser = "0.3.1"
+hevc_parser = "0.3.2"
 clap = { version = "3.0.5", features = ["derive", "wrap_help"] }
-serde_json = { version = "1.0.73", features = ["preserve_order"] }
+serde_json = { version = "1.0.74", features = ["preserve_order"] }
 indicatif = "0.16.2"
 regex = "1.5.4"
-bitvec = "0.22.3"
+bitvec = "1.0.0"
 rayon = "1.5.1"
-anyhow = "1.0.51"
+anyhow = "1.0.52"
 
 [[bin]]
 name = "hdr10plus_tool"
