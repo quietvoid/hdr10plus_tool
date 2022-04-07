@@ -268,7 +268,7 @@ impl Parser {
         Ok(())
     }
 
-    pub fn reorder_metadata(&self, frames: &[Frame], metadata: &mut Vec<MetadataFrame>) {
+    pub fn reorder_metadata(&self, frames: &[Frame], metadata: &mut [MetadataFrame]) {
         print!("Reordering metadata... ");
         stdout().flush().ok();
 
