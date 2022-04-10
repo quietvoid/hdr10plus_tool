@@ -11,11 +11,11 @@ repository = "https://github.com/quietvoid/hdr10plus_tool/tree/master/hdr10plus"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitvec_helpers = "1.0.1"
-anyhow = "1.0.52"
-serde = { version = "1.0.133", features = ["derive"], optional = true }
-serde_json = { version = "1.0.74", features = ["preserve_order"], optional = true }
-hevc_parser = { version = "0.3.2", optional = true }
+bitvec_helpers = "1.0.2"
+anyhow = "1.0.56"
+serde = { version = "1.0.136", features = ["derive"], optional = true }
+serde_json = { version = "1.0.79", features = ["preserve_order"], optional = true }
+hevc_parser = { version = "0.3.4", optional = true }
 
 [features]
 hevc = ["hevc_parser"]
