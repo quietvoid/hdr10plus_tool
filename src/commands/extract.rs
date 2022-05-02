@@ -1,29 +1,34 @@
-use anyhow::Result;
-use std::path::PathBuf;
+use anyhow::{bail, Result};
+use hevc_parser::io::IoFormat;
 
-use super::{input_format, parser::Parser};
+use super::{input_from_either, CliOptions, ExtractArgs};
+use crate::core::initialize_progress_bar;
+use crate::core::parser::Parser;
 
-pub fn extract_json(
-    input: Option<PathBuf>,
-    stdin: Option<PathBuf>,
-    output: Option<PathBuf>,
-    verify: bool,
-    validate: bool,
-) -> Result<()> {
-    let input = match input {
-        Some(input) => input,
-        None => match stdin {
-            Some(stdin) => stdin,
-            None => PathBuf::new(),
-        },
-    };
+pub struct Extractor {}
 
-    let format = input_format(&input)?;
-    let verify_default = if output.is_none() { true } else { verify };
+impl Extractor {
+    pub fn extract_json(args: ExtractArgs, mut options: CliOptions) -> Result<()> {
+        let ExtractArgs {
+            input,
+            input_pos,
+            output,
+        } = args;
+        let input = input_from_either("extract", input, input_pos)?;
 
-    let parser = Parser::new(format, input, output, verify_default, validate);
+        let format = hevc_parser::io::format_from_path(&input)?;
 
-    parser.process_input()?;
+        if format == IoFormat::Matroska {
+            bail!("Extractor: Matroska format unsupported");
+        }
 
-    Ok(())
+        if !options.verify && output.is_none() {
+            options.verify = true
+        };
+
+        let pb = initialize_progress_bar(&format, &input)?;
+        let mut parser = Parser::new(input, output, options, pb);
+
+        parser.process_input(&format)
+    }
 }

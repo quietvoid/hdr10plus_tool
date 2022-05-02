@@ -13,9 +13,10 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
     let mut header_writer = BitVecWriter::new();
 
     header_writer.write(false); // forbidden_zero_bit
+
     header_writer.write_n(&NAL_SEI_PREFIX.to_be_bytes(), 6); // nal_type
     header_writer.write_n(&(0_u8).to_be_bytes(), 6); // nuh_layer_id
-    header_writer.write_n(&(1_u8).to_be_bytes(), 3); // temporal_id
+    header_writer.write_n(&(1_u8).to_be_bytes(), 3); // nuh_temporal_id_plus1
 
     header_writer.write_n(&USER_DATA_REGISTERED_ITU_T_35.to_be_bytes(), 8);
 
