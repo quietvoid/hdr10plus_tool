@@ -1,20 +1,27 @@
-use anyhow::Result;
-use hevc_parser::hevc::{SeiMessage, USER_DATA_REGISTERED_ITU_T_35};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::{convert::TryInto, fs::File, path::Path};
 
-use super::Format;
+use anyhow::Result;
+use indicatif::{ProgressBar, ProgressStyle};
+use thiserror::Error;
+
+use hevc_parser::hevc::{SeiMessage, USER_DATA_REGISTERED_ITU_T_35};
+use hevc_parser::io::IoFormat;
 
 pub mod parser;
 
-#[cfg(test)]
-mod tests;
+#[derive(Error, Debug)]
+pub enum ParserError {
+    #[error("File doesn't contain dynamic metadata")]
+    NoMetadataFound,
+    #[error("Dynamic HDR10+ metadata detected.")]
+    MetadataDetected,
+}
 
-pub fn initialize_progress_bar(format: &Format, input: &Path) -> Result<ProgressBar> {
+pub fn initialize_progress_bar(format: &IoFormat, input: &Path) -> Result<ProgressBar> {
     let pb: ProgressBar;
     let bytes_count;
 
-    if let Format::RawStdin = format {
+    if let IoFormat::RawStdin = format {
         pb = ProgressBar::hidden();
     } else {
         let file = File::open(input).expect("No file found");

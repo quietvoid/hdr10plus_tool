@@ -9,14 +9,18 @@ license = "MIT"
 [dependencies]
 bitvec_helpers = "1.0.2"
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
-hevc_parser = "0.3.4"
-clap = { version = "3.1.8", features = ["derive", "wrap_help"] }
-serde_json = { version = "1.0.79", features = ["preserve_order"] }
+hevc_parser = { version = "0.4.5", features = ["hevc_io"] }
+clap = { version = "3.1.15", features = ["derive", "wrap_help"] }
+serde_json = { version = "1.0.80", features = ["preserve_order"] }
 indicatif = "0.16.2"
-regex = "1.5.5"
 bitvec = "1.0.0"
-rayon = "1.5.1"
-anyhow = "1.0.56"
+anyhow = "1.0.57"
+thiserror = "1.0.31"
+
+[dev-dependencies]
+assert_cmd = "2.0.4"
+assert_fs = "1.0.7"
+predicates = "2.1.1"
 
 [[bin]]
 name = "hdr10plus_tool"

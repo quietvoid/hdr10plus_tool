@@ -1,28 +1,33 @@
+use std::fs::File;
 use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
-use std::{fs::File, path::Path};
 
 use anyhow::{bail, Result};
 use indicatif::ProgressBar;
 
-use hevc_parser::hevc::NAL_SEI_PREFIX;
-use hevc_parser::hevc::{Frame, NALUnit};
+use hevc_parser::hevc::{Frame, NALUnit, NAL_SEI_PREFIX};
+use hevc_parser::io::{processor, IoFormat, IoProcessor};
 use hevc_parser::HevcParser;
+use processor::{HevcProcessor, HevcProcessorOpts};
 
 use hdr10plus::metadata::Hdr10PlusMetadata;
 use hdr10plus::metadata_json::generate_json;
 
-use super::{is_st2094_40_sei, Format};
+use crate::CliOptions;
+
+use super::{is_st2094_40_sei, ParserError};
 
 pub const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct Parser {
-    pub format: Format,
-    pub input: PathBuf,
-    pub output: Option<PathBuf>,
-    pub verify: bool,
-    pub validate: bool,
+    input: PathBuf,
+    output: Option<PathBuf>,
+
+    options: CliOptions,
+    progress_bar: ProgressBar,
+
+    hdr10plus_sei_list: Vec<Vec<u8>>,
 }
 
 #[derive(Clone)]
@@ -34,198 +39,75 @@ pub struct MetadataFrame {
 
 impl Parser {
     pub fn new(
-        format: Format,
         input: PathBuf,
         output: Option<PathBuf>,
-        verify: bool,
-        validate: bool,
+        options: CliOptions,
+        progress_bar: ProgressBar,
     ) -> Self {
         Self {
-            format,
             input,
             output,
-            verify,
-            validate,
+            options,
+            progress_bar,
+            hdr10plus_sei_list: Vec::new(),
         }
     }
 
-    pub fn process_input(&self) -> Result<()> {
-        let pb = super::initialize_progress_bar(&self.format, &self.input)?;
+    pub fn process_input(&mut self, format: &IoFormat) -> Result<()> {
+        let chunk_size = 100_000;
 
-        let mut parser = HevcParser::default();
-
-        let result = match self.format {
-            Format::Matroska => bail!("unsupported format matroska"),
-            _ => self.parse_metadata(&self.input, Some(&pb), &mut parser)?,
+        let processor_opts = HevcProcessorOpts {
+            parse_nals: true,
+            ..Default::default()
         };
+        let mut processor = HevcProcessor::new(format.clone(), processor_opts, chunk_size);
 
-        pb.finish_and_clear();
+        let stdin = std::io::stdin();
+        let mut reader = Box::new(stdin.lock()) as Box<dyn BufRead>;
 
-        if result.is_empty() {
-            bail!("No metadata found in the input.");
-        } else if self.verify && result[0][0] == 1 && result[0].len() == 1 {
-            //Match returned vec to check for --verify
-            println!("Dynamic HDR10+ metadata detected.");
-        } else {
-            let mut final_metadata = Self::llc_read_metadata(result, self.validate)?;
+        if let IoFormat::Raw = format {
+            let file = File::open(&self.input)?;
+            reader = Box::new(BufReader::with_capacity(100_000, file));
+        }
 
-            //Sucessful parse & no --verify
-            if !final_metadata.is_empty() {
-                let frames = parser.ordered_frames();
+        processor.process_io(&mut reader, self)
+    }
 
-                // Reorder to display output order
-                self.reorder_metadata(frames, &mut final_metadata);
+    pub fn add_hdr10plus_sei(&mut self, nals: &[NALUnit], chunk: &[u8]) -> Result<()> {
+        for nal in nals {
+            if let NAL_SEI_PREFIX = nal.nal_type {
+                let sei_payload = &chunk[nal.start..nal.end];
 
-                self.write_json(final_metadata)?;
-            } else {
-                bail!("Failed reading parsed metadata.");
+                if is_st2094_40_sei(sei_payload)? {
+                    self.hdr10plus_sei_list.push(sei_payload[4..].to_vec());
+                }
             }
+        }
+
+        if self.hdr10plus_sei_list.is_empty() {
+            bail!(ParserError::NoMetadataFound);
+        } else if self.options.verify {
+            bail!(ParserError::MetadataDetected);
         }
 
         Ok(())
     }
 
-    pub fn parse_metadata(
-        &self,
-        input: &Path,
-        pb: Option<&ProgressBar>,
-        parser: &mut HevcParser,
-    ) -> Result<Vec<Vec<u8>>> {
-        //BufReader & BufWriter
-        let stdin = std::io::stdin();
-        let mut reader = Box::new(stdin.lock()) as Box<dyn BufRead>;
-
-        if let Format::Raw = self.format {
-            let file = File::open(input)?;
-            reader = Box::new(BufReader::with_capacity(100_000, file));
-        }
-
-        let chunk_size = 100_000;
-
-        let mut main_buf = vec![0; 100_000];
-        let mut sec_buf = vec![0; 50_000];
-
-        let mut chunk = Vec::with_capacity(chunk_size);
-        let mut end: Vec<u8> = Vec::with_capacity(100_000);
-
-        let mut consumed = 0;
-
-        let mut offsets = Vec::with_capacity(2048);
-
-        let mut final_sei_list: Vec<Vec<u8>> = Vec::new();
-
-        while let Ok(n) = reader.read(&mut main_buf) {
-            let mut read_bytes = n;
-            if read_bytes == 0 && end.is_empty() && chunk.is_empty() {
-                break;
-            }
-
-            if self.format == Format::RawStdin {
-                chunk.extend_from_slice(&main_buf[..read_bytes]);
-
-                loop {
-                    let num = reader.read(&mut sec_buf)?;
-
-                    if num > 0 {
-                        read_bytes += num;
-
-                        chunk.extend_from_slice(&sec_buf[..num]);
-
-                        if read_bytes >= chunk_size {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            } else if read_bytes < chunk_size {
-                chunk.extend_from_slice(&main_buf[..read_bytes]);
-            } else {
-                chunk.extend_from_slice(&main_buf);
-            }
-
-            parser.get_offsets(&chunk, &mut offsets);
-
-            if offsets.is_empty() {
-                continue;
-            }
-
-            let last = if read_bytes < chunk_size {
-                *offsets.last().unwrap()
-            } else {
-                let last = offsets.pop().unwrap();
-
-                end.clear();
-                end.extend_from_slice(&chunk[last..]);
-
-                last
-            };
-
-            let nals: Vec<NALUnit> = parser.split_nals(&chunk, &offsets, last, true)?;
-
-            let new_sei = self.find_hdr10plus_sei(&chunk, nals)?;
-
-            if final_sei_list.is_empty() && new_sei.is_empty() {
-                bail!("File doesn't contain dynamic metadata, stopping.");
-            } else if self.verify {
-                return Ok(vec![vec![1]]);
-            }
-
-            final_sei_list.extend_from_slice(&new_sei);
-
-            chunk.clear();
-
-            if !end.is_empty() {
-                chunk.extend_from_slice(&end);
-                end.clear();
-            }
-
-            consumed += read_bytes;
-
-            if consumed >= 100_000_000 {
-                if let Some(pb) = pb {
-                    pb.inc(1);
-                    consumed = 0;
-                }
-            }
-        }
-
-        parser.finish();
-
-        Ok(final_sei_list)
-    }
-
-    pub fn find_hdr10plus_sei(&self, data: &[u8], nals: Vec<NALUnit>) -> Result<Vec<Vec<u8>>> {
-        let mut found_list = Vec::new();
-
-        for nal in nals {
-            if let NAL_SEI_PREFIX = nal.nal_type {
-                let sei_payload = &data[nal.start..nal.end];
-
-                if is_st2094_40_sei(sei_payload)? {
-                    found_list.push(sei_payload[4..].to_vec());
-                }
-            }
-        }
-
-        Ok(found_list)
-    }
-
-    pub fn llc_read_metadata(input: Vec<Vec<u8>>, validate: bool) -> Result<Vec<MetadataFrame>> {
+    pub fn parse_metadata_list(&mut self) -> Result<Vec<MetadataFrame>> {
         print!("Reading parsed dynamic metadata... ");
         stdout().flush().ok();
 
         let mut complete_metadata: Vec<MetadataFrame> = Vec::new();
 
         //Loop over lines and read metadata, HDR10+ LLC format
-        for (index, data) in input.iter().enumerate() {
+        for (index, data) in self.hdr10plus_sei_list.iter().enumerate() {
             let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(data);
 
             // Parse metadata
             let metadata = Hdr10PlusMetadata::parse(bytes)?;
 
             // Validate values
-            if validate {
+            if self.options.validate {
                 metadata.validate()?;
             }
 
@@ -293,5 +175,43 @@ impl Parser {
             .for_each(|(idx, m)| m.presentation_number = idx);
 
         println!("Done.");
+    }
+}
+
+impl IoProcessor for Parser {
+    fn input(&self) -> &PathBuf {
+        &self.input
+    }
+
+    fn update_progress(&mut self, delta: u64) {
+        self.progress_bar.inc(delta);
+    }
+
+    fn process_nals(&mut self, _parser: &HevcParser, nals: &[NALUnit], chunk: &[u8]) -> Result<()> {
+        self.add_hdr10plus_sei(nals, chunk)
+    }
+
+    fn finalize(&mut self, parser: &HevcParser) -> Result<()> {
+        self.progress_bar.finish_and_clear();
+
+        if self.hdr10plus_sei_list.is_empty() {
+            bail!(ParserError::NoMetadataFound);
+        }
+
+        let mut final_metadata = self.parse_metadata_list()?;
+
+        // Sucessful parse & no --verify
+        if !final_metadata.is_empty() {
+            let frames = parser.ordered_frames();
+
+            // Reorder to display output order
+            self.reorder_metadata(frames, &mut final_metadata);
+
+            self.write_json(final_metadata)?;
+        } else {
+            bail!("Failed reading parsed metadata.");
+        }
+
+        Ok(())
     }
 }

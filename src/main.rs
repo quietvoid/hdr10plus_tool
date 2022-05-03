@@ -1,93 +1,63 @@
-use anyhow::{bail, format_err, Result};
+use anyhow::Result;
 use clap::Parser;
-use regex::Regex;
-use std::path::Path;
 
 mod commands;
 mod core;
 
-use commands::{extract, inject, Command};
-use extract::extract_json;
-use inject::Injector;
+use commands::extract::Extractor;
+use commands::inject::Injector;
+use commands::Command;
+
+use crate::core::ParserError;
 
 #[derive(Parser, Debug)]
 #[clap(name = env!("CARGO_PKG_NAME"), about = "Parses HDR10+ dynamic metadata in HEVC video files", author = "quietvoid", version = env!("CARGO_PKG_VERSION"))]
 struct Opt {
-    #[clap(subcommand)]
-    cmd: Command,
-
     #[clap(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
 
     #[clap(long, help = "Skip profile conformity validation")]
     skip_validation: bool,
+
+    #[clap(subcommand)]
+    cmd: Command,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Format {
-    Raw,
-    RawStdin,
-    Matroska,
+#[derive(Default)]
+pub struct CliOptions {
+    pub verify: bool,
+    pub validate: bool,
 }
 
 fn main() -> Result<()> {
     let opt = Opt::parse();
 
-    let verify = opt.verify;
-    let validate = !opt.skip_validation;
+    let cli_options = CliOptions {
+        verify: opt.verify,
+        validate: !opt.skip_validation,
+    };
 
     let res = match opt.cmd {
-        Command::Extract {
-            input,
-            stdin,
-            output,
-        } => extract_json(input, stdin, output, verify, validate),
-        Command::Inject {
-            input,
-            json,
-            output,
-        } => Injector::run(input, json, output, validate),
+        Command::Extract(args) => Extractor::extract_json(args, cli_options),
+        Command::Inject(args) => Injector::inject_json(args, cli_options),
     };
 
-    if let Err(e) = res {
-        println!("{:?}", e);
-    }
+    let actually_errored = if let Err(e) = &res {
+        let err_str = e.to_string();
 
-    Ok(())
-}
-
-fn input_format(input: &Path) -> Result<Format> {
-    let regex = Regex::new(r"\.(hevc|.?265|mkv)")?;
-    let file_name = match input.file_name() {
-        Some(file_name) => file_name
-            .to_str()
-            .ok_or_else(|| format_err!("Invalid file name"))?,
-        None => "",
-    };
-
-    if file_name == "-" {
-        Ok(Format::RawStdin)
-    } else if regex.is_match(file_name) && input.is_file() {
-        if file_name.ends_with(".mkv") {
-            Ok(Format::Matroska)
+        if err_str == ParserError::MetadataDetected.to_string() {
+            println!("{}", err_str);
+            false
         } else {
-            Ok(Format::Raw)
+            true
         }
-    } else if file_name.is_empty() {
-        bail!("Missing input.")
-    } else if !input.is_file() {
-        bail!("Input file doesn't exist.")
     } else {
-        bail!("Invalid input file type.")
-    }
-}
+        false
+    };
 
-impl std::fmt::Display for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Format::Matroska => write!(f, "Matroska file"),
-            Format::Raw => write!(f, "HEVC file"),
-            Format::RawStdin => write!(f, "HEVC pipe"),
-        }
+    if actually_errored {
+        res
+    } else {
+        Ok(())
     }
 }
