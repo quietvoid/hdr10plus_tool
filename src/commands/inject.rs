@@ -181,6 +181,8 @@ impl Injector {
                     start_code: NALUStartCode::Length4,
                     data: hdr10plus_data,
                 })
+            } else if mismatched_length {
+                last_metadata.clone()
             } else {
                 bail!(
                     "No metadata found for presentation frame {}",
