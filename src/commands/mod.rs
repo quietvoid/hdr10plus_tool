@@ -76,7 +76,7 @@ pub struct InjectArgs {
         long,
         short = 'j',
         help = "Sets the input JSON file to use",
-        parse(from_os_str)
+        value_hint = ValueHint::FilePath
     )]
     pub json: PathBuf,
 

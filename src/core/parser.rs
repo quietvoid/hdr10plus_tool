@@ -78,7 +78,7 @@ impl Parser {
             if let NAL_SEI_PREFIX = nal.nal_type {
                 let sei_payload = &chunk[nal.start..nal.end];
 
-                if is_st2094_40_sei(sei_payload)? {
+                if is_st2094_40_sei(sei_payload, self.options.validate)? {
                     self.hdr10plus_sei_list.push(sei_payload[4..].to_vec());
                 }
             }

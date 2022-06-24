@@ -39,7 +39,7 @@ pub fn initialize_progress_bar(format: &IoFormat, input: &Path) -> Result<Progre
     Ok(pb)
 }
 
-pub fn is_st2094_40_sei(sei_payload: &[u8]) -> Result<bool> {
+pub fn is_st2094_40_sei(sei_payload: &[u8], validate: bool) -> Result<bool> {
     if sei_payload.len() >= 4 {
         let sei = SeiMessage::from_bytes(sei_payload)?;
 
@@ -61,7 +61,13 @@ pub fn is_st2094_40_sei(sei_payload: &[u8]) -> Result<bool> {
                     let application_identifier = itu_t35_bytes[5];
                     let application_version = itu_t35_bytes[6];
 
-                    if application_identifier == 4 && application_version == 1 {
+                    let valid_version = if validate {
+                        application_version == 1
+                    } else {
+                        application_version <= 1
+                    };
+
+                    if application_identifier == 4 && valid_version {
                         return Ok(true);
                     }
                 }

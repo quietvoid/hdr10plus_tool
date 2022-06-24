@@ -262,8 +262,8 @@ impl IoProcessor for Injector {
                     self.frame_buffer.nals.clear();
                 }
 
-                let is_hdr10plus_sei =
-                    nal.nal_type == NAL_SEI_PREFIX && is_st2094_40_sei(&chunk[nal.start..nal.end])?;
+                let is_hdr10plus_sei = nal.nal_type == NAL_SEI_PREFIX
+                    && is_st2094_40_sei(&chunk[nal.start..nal.end], self.options.validate)?;
 
                 // Ignore existing HDR10+ SEI
                 if !is_hdr10plus_sei {
@@ -277,7 +277,8 @@ impl IoProcessor for Injector {
         } else if !self.already_checked_for_hdr10plus
             && nals.iter().any(|e| {
                 e.nal_type == NAL_SEI_PREFIX
-                    && is_st2094_40_sei(&chunk[e.start..e.end]).unwrap_or(false)
+                    && is_st2094_40_sei(&chunk[e.start..e.end], self.options.validate)
+                        .unwrap_or(false)
             })
         {
             self.already_checked_for_hdr10plus = true;
