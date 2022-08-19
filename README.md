@@ -1,6 +1,14 @@
 # hdr10plus_tool [![CI](https://github.com/quietvoid/hdr10plus_tool/workflows/CI/badge.svg)](https://github.com/quietvoid/hdr10plus_tool/actions/workflows/ci.yml) [![Artifacts](https://github.com/quietvoid/hdr10plus_tool/workflows/Artifacts/badge.svg)](https://github.com/quietvoid/hdr10plus_tool/actions/workflows/release.yml)
 CLI utility to work with HDR10+ in HEVC files.  
 Previously named `hdr10plus_parser`, now it's more than just a parser.
+
+&nbsp;
+
+## **Building**
+### **Toolchain**
+
+The minimum Rust version to build **`hdr10plus_tool`** is 1.57.0.
+
 &nbsp;
 
 Options that apply to the commands:

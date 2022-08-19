@@ -32,7 +32,8 @@ pub fn initialize_progress_bar(format: &IoFormat, input: &Path) -> Result<Progre
 
         pb = ProgressBar::new(bytes_count);
         pb.set_style(
-            ProgressStyle::default_bar().template("[{elapsed_precise}] {bar:60.cyan} {percent}%"),
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {bar:60.cyan} {percent}%")?,
         );
     }
 

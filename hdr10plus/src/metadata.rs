@@ -39,7 +39,7 @@ pub struct Hdr10PlusMetadata {
     pub color_saturation_weight: u8,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Eq)]
 pub struct ProcessingWindow {
     window_upper_left_corner_x: u16,
     window_upper_left_corner_y: u16,
@@ -57,27 +57,27 @@ pub struct ProcessingWindow {
     overlap_process_option: bool,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Eq)]
 pub struct ActualTargetedSystemDisplay {
     pub num_rows_targeted_system_display_actual_peak_luminance: u8,
     pub num_cols_targeted_system_display_actual_peak_luminance: u8,
     pub targeted_system_display_actual_peak_luminance: Vec<Vec<u8>>,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Eq)]
 pub struct DistributionMaxRgb {
     pub percentage: u8,
     pub percentile: u32,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Eq)]
 pub struct ActualMasteringDisplay {
     pub num_rows_mastering_display_actual_peak_luminance: u8,
     pub num_cols_mastering_display_actual_peak_luminanc: u8,
     pub mastering_display_actual_peak_luminance: Vec<Vec<u8>>,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Eq)]
 pub struct BezierCurve {
     pub knee_point_x: u16,
     pub knee_point_y: u16,
