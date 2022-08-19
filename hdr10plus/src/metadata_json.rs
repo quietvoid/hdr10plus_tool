@@ -92,7 +92,7 @@ impl MetadataJsonRoot {
         }
     }
 
-    pub fn from_file(input: &Path) -> Result<MetadataJsonRoot> {
+    pub fn from_file<P: AsRef<Path>>(input: P) -> Result<MetadataJsonRoot> {
         let mut s = String::new();
         File::open(input)?.read_to_string(&mut s)?;
 
