@@ -9,9 +9,9 @@ license = "MIT"
 [dependencies]
 bitvec_helpers = "1.0.2"
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
-hevc_parser = { version = "0.4.6", features = ["hevc_io"] }
+hevc_parser = { version = "0.4.7", features = ["hevc_io"] }
 clap = { version = "3.2.17", features = ["derive", "wrap_help", "deprecated"] }
-serde_json = { version = "1.0.83", features = ["preserve_order"] }
+serde_json = { version = "1.0.85", features = ["preserve_order"] }
 indicatif = "0.17.0"
 bitvec = "1.0.1"
 anyhow = "1.0.62"

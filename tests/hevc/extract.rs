@@ -1848,3 +1848,45 @@ fn sample62() {
     assert_eq!(first_frames, vec![0, 3, 6]);
     assert_eq!(scene_lengths, vec![3, 3, 3]);
 }
+
+#[test]
+fn invalid_null_byte_seq_metadata() {
+    let input_file = Path::new("assets/metadata/invalid-null-byte-seq.hevc");
+    let (metadata, metadata_root) = run_test(input_file, true).unwrap();
+
+    metadata.validate().unwrap();
+
+    assert_eq!(metadata.profile, "B");
+    assert_eq!(metadata.num_windows, 1);
+    assert_eq!(metadata.targeted_system_display_maximum_luminance, 500);
+    assert_eq!(metadata.average_maxrgb, 0);
+    assert_eq!(metadata.maxscl, [0, 0, 0]);
+    assert_eq!(
+        DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
+        vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+    );
+    assert_eq!(
+        DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
+        vec![0, 0, 100, 0, 0, 0, 0, 0, 0]
+    );
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 0);
+    assert_eq!(bc.knee_point_y, 0);
+    assert_eq!(
+        bc.bezier_curve_anchors,
+        vec![102, 205, 307, 410, 512, 614, 717, 819, 922]
+    );
+
+    assert_eq!(metadata_root.info.profile, "B");
+    assert_scene_info(&metadata_root, 0, 0, 0, 0);
+
+    let info_summary = metadata_root.scene_info_summary;
+    let first_frames = info_summary.scene_first_frame_index;
+    let scene_lengths = info_summary.scene_frame_numbers;
+
+    assert_eq!(first_frames, vec![0]);
+    assert_eq!(scene_lengths, vec![1]);
+}

@@ -15,7 +15,7 @@ bitvec_helpers = "1.0.2"
 anyhow = "1.0.56"
 serde = { version = "1.0.136", features = ["derive"], optional = true }
 serde_json = { version = "1.0.79", features = ["preserve_order"], optional = true }
-hevc_parser = { version = "0.4.6", optional = true }
+hevc_parser = { version = "0.4.7", optional = true }
 
 [features]
 hevc = ["hevc_parser"]
