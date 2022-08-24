@@ -1,6 +1,6 @@
 [package]
 name = "hdr10plus_tool"
-version = "1.3.1"
+version = "1.3.2"
 authors = ["quietvoid"]
 edition = "2021"
 rust-version = "1.57.0"
