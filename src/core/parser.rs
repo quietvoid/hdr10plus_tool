@@ -3,6 +3,9 @@ use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
+use hevc_parser::utils::{
+    add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
+};
 use indicatif::ProgressBar;
 
 use hevc_parser::hevc::{Frame, NALUnit, NAL_SEI_PREFIX};
@@ -15,7 +18,7 @@ use hdr10plus::metadata_json::generate_json;
 
 use crate::CliOptions;
 
-use super::{is_st2094_40_sei, ParserError};
+use super::{st2094_40_sei_msg, ParserError};
 
 pub const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -76,10 +79,18 @@ impl Parser {
     pub fn add_hdr10plus_sei(&mut self, nals: &[NALUnit], chunk: &[u8]) -> Result<()> {
         for nal in nals {
             if let NAL_SEI_PREFIX = nal.nal_type {
-                let sei_payload = &chunk[nal.start..nal.end];
+                let sei_payload =
+                    clear_start_code_emulation_prevention_3_byte(&chunk[nal.start..nal.end]);
 
-                if is_st2094_40_sei(sei_payload, self.options.validate)? {
-                    self.hdr10plus_sei_list.push(sei_payload[4..].to_vec());
+                if let Some(msg) = st2094_40_sei_msg(&sei_payload, self.options.validate)? {
+                    let start = msg.payload_offset;
+                    let end = start + msg.payload_size;
+
+                    // Re-add removed bytes
+                    let mut bytes = sei_payload[start..end].to_vec();
+                    add_start_code_emulation_prevention_3_byte(&mut bytes);
+
+                    self.hdr10plus_sei_list.push(bytes);
                 }
             }
         }

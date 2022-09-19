@@ -1890,3 +1890,35 @@ fn invalid_null_byte_seq_metadata() {
     assert_eq!(first_frames, vec![0]);
     assert_eq!(scene_lengths, vec![1]);
 }
+
+#[test]
+fn multimsg_sei_metadata() {
+    let input_file = Path::new("assets/hevc_tests/multimsg-sei.hevc");
+    let (metadata, _metadata_root) = run_test(input_file, true).unwrap();
+
+    metadata.validate().unwrap();
+
+    assert_eq!(metadata.profile, "B");
+    assert_eq!(metadata.num_windows, 1);
+    assert_eq!(metadata.targeted_system_display_maximum_luminance, 400);
+    assert_eq!(metadata.average_maxrgb, 263);
+    assert_eq!(metadata.maxscl, [7768, 6589, 6912]);
+    assert_eq!(
+        DistributionMaxRgb::distribution_index(&metadata.distribution_maxrgb),
+        vec![1, 5, 10, 25, 50, 75, 90, 95, 99]
+    );
+    assert_eq!(
+        DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
+        vec![0, 6080, 92, 1, 4, 107, 726, 1784, 5843]
+    );
+
+    assert!(metadata.bezier_curve.is_some());
+    let bc = metadata.bezier_curve.unwrap();
+
+    assert_eq!(bc.knee_point_x, 164);
+    assert_eq!(bc.knee_point_y, 240);
+    assert_eq!(
+        bc.bezier_curve_anchors,
+        vec![143, 298, 447, 592, 731, 864, 891, 917, 938]
+    );
+}

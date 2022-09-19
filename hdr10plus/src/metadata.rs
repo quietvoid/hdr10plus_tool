@@ -87,15 +87,16 @@ pub struct BezierCurve {
 
 impl Hdr10PlusMetadata {
     pub fn parse(data: Vec<u8>) -> Result<Hdr10PlusMetadata> {
+        println!("{:?}", data);
         let mut reader = BitVecReader::new(data);
 
         let mut meta = Hdr10PlusMetadata {
-            itu_t_t35_country_code: reader.get_n(8),
-            itu_t_t35_terminal_provider_code: reader.get_n(16),
-            itu_t_t35_terminal_provider_oriented_code: reader.get_n(16),
-            application_identifier: reader.get_n(8),
-            application_version: reader.get_n(8),
-            num_windows: reader.get_n(2),
+            itu_t_t35_country_code: reader.get_n(8)?,
+            itu_t_t35_terminal_provider_code: reader.get_n(16)?,
+            itu_t_t35_terminal_provider_oriented_code: reader.get_n(16)?,
+            application_identifier: reader.get_n(8)?,
+            application_version: reader.get_n(8)?,
+            num_windows: reader.get_n(2)?,
             ..Default::default()
         };
 
@@ -110,33 +111,33 @@ impl Hdr10PlusMetadata {
             meta.processing_windows = Some(processing_windows);
         }
 
-        meta.targeted_system_display_maximum_luminance = reader.get_n(27);
+        meta.targeted_system_display_maximum_luminance = reader.get_n(27)?;
 
         meta.targeted_system_display_actual_peak_luminance_flag = reader.get()?;
         if meta.targeted_system_display_actual_peak_luminance_flag {
-            let atsd = ActualTargetedSystemDisplay::parse(&mut reader);
+            let atsd = ActualTargetedSystemDisplay::parse(&mut reader)?;
             meta.actual_targeted_system_display = Some(atsd);
         }
 
         for _ in 0..meta.num_windows {
             for i in 0..3 {
-                meta.maxscl[i] = reader.get_n(17);
+                meta.maxscl[i] = reader.get_n(17)?;
             }
 
-            meta.average_maxrgb = reader.get_n(17);
+            meta.average_maxrgb = reader.get_n(17)?;
 
-            meta.num_distribution_maxrgb_percentiles = reader.get_n(4);
+            meta.num_distribution_maxrgb_percentiles = reader.get_n(4)?;
             for _ in 0..meta.num_distribution_maxrgb_percentiles {
-                let dmrgb = DistributionMaxRgb::parse(&mut reader);
+                let dmrgb = DistributionMaxRgb::parse(&mut reader)?;
                 meta.distribution_maxrgb.push(dmrgb);
             }
 
-            meta.fraction_bright_pixels = reader.get_n(10);
+            meta.fraction_bright_pixels = reader.get_n(10)?;
         }
 
         meta.mastering_display_actual_peak_luminance_flag = reader.get()?;
         if meta.mastering_display_actual_peak_luminance_flag {
-            let amd = ActualMasteringDisplay::parse(&mut reader);
+            let amd = ActualMasteringDisplay::parse(&mut reader)?;
             meta.actual_mastering_display = Some(amd);
         }
 
@@ -144,14 +145,14 @@ impl Hdr10PlusMetadata {
             meta.tone_mapping_flag = reader.get()?;
 
             if meta.tone_mapping_flag {
-                let bc = BezierCurve::parse(&mut reader);
+                let bc = BezierCurve::parse(&mut reader)?;
                 meta.bezier_curve = Some(bc);
             }
         }
 
         meta.color_saturation_mapping_flag = reader.get()?;
         if meta.color_saturation_mapping_flag {
-            meta.color_saturation_weight = reader.get_n(6);
+            meta.color_saturation_weight = reader.get_n(6)?;
         }
 
         meta.set_profile();
@@ -335,11 +336,11 @@ impl Hdr10PlusMetadata {
 }
 
 impl DistributionMaxRgb {
-    pub fn parse(reader: &mut BitVecReader) -> DistributionMaxRgb {
-        DistributionMaxRgb {
-            percentage: reader.get_n(7),
-            percentile: reader.get_n(17),
-        }
+    pub fn parse(reader: &mut BitVecReader) -> Result<DistributionMaxRgb> {
+        Ok(DistributionMaxRgb {
+            percentage: reader.get_n(7)?,
+            percentile: reader.get_n(17)?,
+        })
     }
 
     pub fn distribution_index(list: &[Self]) -> Vec<u8> {
@@ -392,16 +393,16 @@ impl DistributionMaxRgb {
 impl ProcessingWindow {
     pub fn parse(reader: &mut BitVecReader) -> Result<ProcessingWindow> {
         Ok(ProcessingWindow {
-            window_upper_left_corner_x: reader.get_n(16),
-            window_upper_left_corner_y: reader.get_n(16),
-            window_lower_right_corner_x: reader.get_n(16),
-            window_lower_right_corner_y: reader.get_n(16),
-            center_of_ellipse_x: reader.get_n(16),
-            center_of_ellipse_y: reader.get_n(16),
-            rotation_angle: reader.get_n(8),
-            semimajor_axis_internal_ellipse: reader.get_n(16),
-            semimajor_axis_external_ellipse: reader.get_n(16),
-            semiminor_axis_external_ellipse: reader.get_n(16),
+            window_upper_left_corner_x: reader.get_n(16)?,
+            window_upper_left_corner_y: reader.get_n(16)?,
+            window_lower_right_corner_x: reader.get_n(16)?,
+            window_lower_right_corner_y: reader.get_n(16)?,
+            center_of_ellipse_x: reader.get_n(16)?,
+            center_of_ellipse_y: reader.get_n(16)?,
+            rotation_angle: reader.get_n(8)?,
+            semimajor_axis_internal_ellipse: reader.get_n(16)?,
+            semimajor_axis_external_ellipse: reader.get_n(16)?,
+            semiminor_axis_external_ellipse: reader.get_n(16)?,
             overlap_process_option: reader.get()?,
         })
     }
@@ -422,10 +423,10 @@ impl ProcessingWindow {
 }
 
 impl ActualTargetedSystemDisplay {
-    pub fn parse(reader: &mut BitVecReader) -> ActualTargetedSystemDisplay {
+    pub fn parse(reader: &mut BitVecReader) -> Result<ActualTargetedSystemDisplay> {
         let mut atsd = ActualTargetedSystemDisplay {
-            num_rows_targeted_system_display_actual_peak_luminance: reader.get_n(5),
-            num_cols_targeted_system_display_actual_peak_luminance: reader.get_n(5),
+            num_rows_targeted_system_display_actual_peak_luminance: reader.get_n(5)?,
+            num_cols_targeted_system_display_actual_peak_luminance: reader.get_n(5)?,
             ..Default::default()
         };
 
@@ -436,11 +437,11 @@ impl ActualTargetedSystemDisplay {
 
         for i in 0..atsd.num_rows_targeted_system_display_actual_peak_luminance as usize {
             for j in 0..atsd.num_cols_targeted_system_display_actual_peak_luminance as usize {
-                atsd.targeted_system_display_actual_peak_luminance[i][j] = reader.get_n(4);
+                atsd.targeted_system_display_actual_peak_luminance[i][j] = reader.get_n(4)?;
             }
         }
 
-        atsd
+        Ok(atsd)
     }
 
     pub fn encode(&self, writer: &mut BitVecWriter) {
@@ -469,10 +470,10 @@ impl ActualTargetedSystemDisplay {
 }
 
 impl ActualMasteringDisplay {
-    pub fn parse(reader: &mut BitVecReader) -> ActualMasteringDisplay {
+    pub fn parse(reader: &mut BitVecReader) -> Result<ActualMasteringDisplay> {
         let mut amd = ActualMasteringDisplay {
-            num_rows_mastering_display_actual_peak_luminance: reader.get_n(5),
-            num_cols_mastering_display_actual_peak_luminanc: reader.get_n(5),
+            num_rows_mastering_display_actual_peak_luminance: reader.get_n(5)?,
+            num_cols_mastering_display_actual_peak_luminanc: reader.get_n(5)?,
             ..Default::default()
         };
 
@@ -483,11 +484,11 @@ impl ActualMasteringDisplay {
 
         for i in 0..amd.num_rows_mastering_display_actual_peak_luminance as usize {
             for j in 0..amd.num_cols_mastering_display_actual_peak_luminanc as usize {
-                amd.mastering_display_actual_peak_luminance[i][j] = reader.get_n(4);
+                amd.mastering_display_actual_peak_luminance[i][j] = reader.get_n(4)?;
             }
         }
 
-        amd
+        Ok(amd)
     }
 
     pub fn encode(&self, writer: &mut BitVecWriter) {
@@ -516,11 +517,11 @@ impl ActualMasteringDisplay {
 }
 
 impl BezierCurve {
-    pub fn parse(reader: &mut BitVecReader) -> BezierCurve {
+    pub fn parse(reader: &mut BitVecReader) -> Result<BezierCurve> {
         let mut bc = BezierCurve {
-            knee_point_x: reader.get_n(12),
-            knee_point_y: reader.get_n(12),
-            num_bezier_curve_anchors: reader.get_n(4),
+            knee_point_x: reader.get_n(12)?,
+            knee_point_y: reader.get_n(12)?,
+            num_bezier_curve_anchors: reader.get_n(4)?,
             ..Default::default()
         };
 
@@ -528,10 +529,10 @@ impl BezierCurve {
             .resize(bc.num_bezier_curve_anchors as usize, 0);
 
         for i in 0..bc.num_bezier_curve_anchors as usize {
-            bc.bezier_curve_anchors[i] = reader.get_n(10);
+            bc.bezier_curve_anchors[i] = reader.get_n(10)?;
         }
 
-        bc
+        Ok(bc)
     }
 
     fn validate(&self) -> Result<()> {

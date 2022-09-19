@@ -3,6 +3,9 @@ use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
+use hevc_parser::utils::{
+    add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
+};
 use indicatif::ProgressBar;
 
 use hevc_parser::io::{processor, FrameBuffer, IoFormat, IoProcessor, NalBuffer};
@@ -12,7 +15,7 @@ use processor::{HevcProcessor, HevcProcessorOpts};
 use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
 
 use crate::commands::InjectArgs;
-use crate::core::{initialize_progress_bar, is_st2094_40_sei};
+use crate::core::{initialize_progress_bar, st2094_40_sei_msg};
 
 use super::{input_from_either, CliOptions};
 
@@ -262,11 +265,36 @@ impl IoProcessor for Injector {
                     self.frame_buffer.nals.clear();
                 }
 
-                let is_hdr10plus_sei = nal.nal_type == NAL_SEI_PREFIX
-                    && is_st2094_40_sei(&chunk[nal.start..nal.end], self.options.validate)?;
+                let (st2094_40_msg, payload) = if nal.nal_type == NAL_SEI_PREFIX {
+                    let sei_payload =
+                        clear_start_code_emulation_prevention_3_byte(&chunk[nal.start..nal.end]);
+                    let msg = st2094_40_sei_msg(&sei_payload, self.options.validate)?;
 
-                // Ignore existing HDR10+ SEI
-                if !is_hdr10plus_sei {
+                    (msg, Some(sei_payload))
+                } else {
+                    (None, None)
+                };
+
+                if let (Some(msg), Some(mut payload)) = (st2094_40_msg, payload) {
+                    let messages = SeiMessage::parse_sei_rbsp(&payload)?;
+
+                    // Only remove ST2094-40 message if there are others
+                    if messages.len() > 1 {
+                        let start = msg.msg_offset;
+                        let end = msg.payload_offset + msg.payload_size;
+
+                        payload.drain(start..end);
+                        add_start_code_emulation_prevention_3_byte(&mut payload);
+
+                        println!("{:?}", payload);
+
+                        self.frame_buffer.nals.push(NalBuffer {
+                            nal_type: nal.nal_type,
+                            start_code: nal.start_code,
+                            data: payload,
+                        });
+                    }
+                } else {
                     self.frame_buffer.nals.push(NalBuffer {
                         nal_type: nal.nal_type,
                         start_code: nal.start_code,
@@ -277,8 +305,9 @@ impl IoProcessor for Injector {
         } else if !self.already_checked_for_hdr10plus
             && nals.iter().any(|e| {
                 e.nal_type == NAL_SEI_PREFIX
-                    && is_st2094_40_sei(&chunk[e.start..e.end], self.options.validate)
-                        .unwrap_or(false)
+                    && st2094_40_sei_msg(&chunk[e.start..e.end], self.options.validate)
+                        .unwrap_or(None)
+                        .is_some()
             })
         {
             self.already_checked_for_hdr10plus = true;

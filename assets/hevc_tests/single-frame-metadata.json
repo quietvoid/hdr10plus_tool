@@ -1,0 +1,74 @@
+{
+  "JSONInfo": {
+    "HDR10plusProfile": "B",
+    "Version": "1.0"
+  },
+  "SceneInfo": [
+    {
+      "BezierCurveData": {
+        "Anchors": [
+          143,
+          298,
+          447,
+          592,
+          731,
+          864,
+          891,
+          917,
+          938
+        ],
+        "KneePointX": 164,
+        "KneePointY": 240
+      },
+      "LuminanceParameters": {
+        "AverageRGB": 263,
+        "LuminanceDistributions": {
+          "DistributionIndex": [
+            1,
+            5,
+            10,
+            25,
+            50,
+            75,
+            90,
+            95,
+            99
+          ],
+          "DistributionValues": [
+            0,
+            6080,
+            92,
+            1,
+            4,
+            107,
+            726,
+            1784,
+            5843
+          ]
+        },
+        "MaxScl": [
+          7768,
+          6589,
+          6912
+        ]
+      },
+      "NumberOfWindows": 1,
+      "TargetedSystemDisplayMaximumLuminance": 400,
+      "SceneFrameIndex": 0,
+      "SceneId": 0,
+      "SequenceFrameIndex": 0
+    }
+  ],
+  "SceneInfoSummary": {
+    "SceneFirstFrameIndex": [
+      0
+    ],
+    "SceneFrameNumbers": [
+      1
+    ]
+  },
+  "ToolInfo": {
+    "Tool": "hdr10plus_tool",
+    "Version": "1.3.2"
+  }
+}
