@@ -22,10 +22,18 @@ Options that apply to the commands:
 
     If no output is specified, the file is only parsed partially to verify presence of metadata.
 
-    Examples:
-    * `hdr10plus_tool extract video.hevc -o metadata.json`
-    * `ffmpeg -i "input.mkv" -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o metadata.json -`
-    * Extract without validating: `hdr10plus_tool --skip-validation extract video.hevc -o metadata.json`
+    **Examples**:
+    ```console
+    hdr10plus_tool extract video.hevc -o metadata.json
+    ```
+    ```console
+    ffmpeg -i input.mkv -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o metadata.json -
+    ```
+
+    **Extract without validating**:
+    ```console
+    hdr10plus_tool --skip-validation extract video.hevc -o metadata.json
+    ```
 
 &nbsp;
 * ### **inject**
@@ -34,7 +42,7 @@ Options that apply to the commands:
     
     **Example**:  
     ```console
-    hdr10plus_tool inject -i video.hevc -j metadata.json -o injected_output.hevc`  
+    hdr10plus_tool inject -i video.hevc -j metadata.json -o injected_output.hevc
     ```
 
 &nbsp;
@@ -44,7 +52,10 @@ Options that apply to the commands:
     
     **Example**:  
     ```console
-    hdr10plus_tool remove video.hevc -o hdr10plus_removed_output.hevc`
+    hdr10plus_tool remove video.hevc -o hdr10plus_removed_output.hevc
+    ```
+    ```console
+    ffmpeg -i input.mkv -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool remove -
     ```
 &nbsp;
 
