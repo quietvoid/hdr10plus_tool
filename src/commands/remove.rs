@@ -57,7 +57,7 @@ impl Remover {
         let chunk_size = 100_000;
 
         let processor_opts = HevcProcessorOpts {
-            parse_nals: true,
+            parse_nals: false,
             ..Default::default()
         };
         let mut processor = HevcProcessor::new(format.clone(), processor_opts, chunk_size);
