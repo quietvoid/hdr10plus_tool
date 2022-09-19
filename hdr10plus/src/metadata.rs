@@ -87,7 +87,6 @@ pub struct BezierCurve {
 
 impl Hdr10PlusMetadata {
     pub fn parse(data: Vec<u8>) -> Result<Hdr10PlusMetadata> {
-        println!("{:?}", data);
         let mut reader = BitVecReader::new(data);
 
         let mut meta = Hdr10PlusMetadata {

@@ -286,8 +286,6 @@ impl IoProcessor for Injector {
                         payload.drain(start..end);
                         add_start_code_emulation_prevention_3_byte(&mut payload);
 
-                        println!("{:?}", payload);
-
                         self.frame_buffer.nals.push(NalBuffer {
                             nal_type: nal.nal_type,
                             start_code: nal.start_code,

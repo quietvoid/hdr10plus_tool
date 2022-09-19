@@ -296,7 +296,7 @@ checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
 name = "hdr10plus"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "bitvec_helpers 2.0.0",
