@@ -6,6 +6,7 @@ mod core;
 
 use commands::extract::Extractor;
 use commands::inject::Injector;
+use commands::remove::Remover;
 use commands::Command;
 
 use crate::core::ParserError;
@@ -40,6 +41,7 @@ fn main() -> Result<()> {
     let res = match opt.cmd {
         Command::Extract(args) => Extractor::extract_json(args, cli_options),
         Command::Inject(args) => Injector::inject_json(args, cli_options),
+        Command::Remove(args) => Remover::remove_sei(args, cli_options),
     };
 
     let actually_errored = if let Err(e) = &res {

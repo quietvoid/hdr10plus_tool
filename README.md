@@ -16,7 +16,7 @@ Options that apply to the commands:
 * `--skip-validation` Skip profile conformity validation. Invalid metadata is set to profile `N/A`.
 
 ## Commands
-* #### extract
+* ### **extract**
     Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file.  
     Also calculates the scene information for compatibility with Samsung tools.  
 
@@ -26,12 +26,26 @@ Options that apply to the commands:
     * `hdr10plus_tool extract video.hevc -o metadata.json`
     * `ffmpeg -i "input.mkv" -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o metadata.json -`
     * Extract without validating: `hdr10plus_tool --skip-validation extract video.hevc -o metadata.json`
+
 &nbsp;
-* #### inject
+* ### **inject**
     Interleaves HDR10+ metadata NAL units before slices in an HEVC encoded bitstream.  
     `--verify` has no effect with this command.
     
-    * Example: `hdr10plus_tool inject -i video.hevc -j metadata.json -o injected_output.hevc`  
+    **Example**:  
+    ```console
+    hdr10plus_tool inject -i video.hevc -j metadata.json -o injected_output.hevc`  
+    ```
+
+&nbsp;
+* ### **remove**
+    Removes HDR10+ metadata NAL units (or SEI messages) in an HEVC encoded bitstream.  
+    `--verify` has no effect with this command.
+    
+    **Example**:  
+    ```console
+    hdr10plus_tool remove video.hevc -o hdr10plus_removed_output.hevc`
+    ```
 &nbsp;
 
 ## Sample files

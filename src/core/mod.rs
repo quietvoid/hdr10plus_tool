@@ -5,9 +5,11 @@ use indicatif::{ProgressBar, ProgressStyle};
 use thiserror::Error;
 
 use bitvec_helpers::bitslice_reader::BitSliceReader;
-use hevc_parser::hevc::{SeiMessage, USER_DATA_REGISTERED_ITU_T_35};
+use hevc_parser::hevc::{NALUnit, SeiMessage, NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
 use hevc_parser::io::IoFormat;
-use hevc_parser::utils::clear_start_code_emulation_prevention_3_byte;
+use hevc_parser::utils::{
+    add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
+};
 
 pub mod parser;
 
@@ -85,4 +87,39 @@ pub fn st2094_40_sei_msg(sei_payload: &[u8], validate: bool) -> Result<Option<Se
     };
 
     Ok(res)
+}
+
+// Returns Some when the SEI needs to be written
+// Otherwise, the NALU only contains one SEI message, and can be dropped
+pub fn prefix_sei_removed_hdr10plus_nalu(
+    chunk: &[u8],
+    nal: &NALUnit,
+) -> Result<(bool, Option<Vec<u8>>)> {
+    let (st2094_40_msg, payload) = if nal.nal_type == NAL_SEI_PREFIX {
+        let sei_payload = clear_start_code_emulation_prevention_3_byte(&chunk[nal.start..nal.end]);
+        let msg = st2094_40_sei_msg(&sei_payload, false)?;
+
+        (msg, Some(sei_payload))
+    } else {
+        (None, None)
+    };
+
+    let has_st2094_40 = st2094_40_msg.is_some();
+
+    if let (Some(msg), Some(mut payload)) = (st2094_40_msg, payload) {
+        let messages = SeiMessage::parse_sei_rbsp(&payload)?;
+
+        // Only remove ST2094-40 message if there are others
+        if messages.len() > 1 {
+            let start = msg.msg_offset;
+            let end = msg.payload_offset + msg.payload_size;
+
+            payload.drain(start..end);
+            add_start_code_emulation_prevention_3_byte(&mut payload);
+
+            return Ok((true, Some(payload)));
+        }
+    }
+
+    Ok((has_st2094_40, None))
 }

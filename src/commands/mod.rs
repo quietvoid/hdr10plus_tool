@@ -7,6 +7,7 @@ use crate::CliOptions;
 
 pub mod extract;
 pub mod inject;
+pub mod remove;
 
 #[derive(Parser, Debug)]
 pub enum Command {
@@ -17,6 +18,9 @@ pub enum Command {
         about = "Interleaves HDR10+ metadata NAL units before slices in an HEVC encoded bitstream"
     )]
     Inject(InjectArgs),
+
+    #[clap(about = "Removes HDR10+ metadata SEI messages in an HEVC encoded bitstream")]
+    Remove(RemoveArgs),
 }
 
 #[derive(Args, Debug)]
@@ -84,6 +88,37 @@ pub struct InjectArgs {
         long,
         short = 'o',
         help = "Output HEVC file location",
+        value_hint = ValueHint::FilePath
+    )]
+    pub output: Option<PathBuf>,
+}
+
+#[derive(Args, Debug)]
+pub struct RemoveArgs {
+    #[clap(
+        name = "input",
+        help = "Sets the input HEVC file to use, or piped with -",
+        long,
+        short = 'i',
+        conflicts_with = "input_pos",
+        required_unless_present = "input_pos",
+        value_hint = ValueHint::FilePath,
+    )]
+    pub input: Option<PathBuf>,
+
+    #[clap(
+        name = "input_pos",
+        help = "Sets the input HEVC file to use, or piped with - (positional)",
+        conflicts_with = "input",
+        required_unless_present = "input",
+        value_hint = ValueHint::FilePath
+    )]
+    pub input_pos: Option<PathBuf>,
+
+    #[clap(
+        long,
+        short = 'o',
+        help = "Sets the output HEVC file to use",
         value_hint = ValueHint::FilePath
     )]
     pub output: Option<PathBuf>,
