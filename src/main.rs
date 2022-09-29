@@ -12,15 +12,15 @@ use commands::Command;
 use crate::core::ParserError;
 
 #[derive(Parser, Debug)]
-#[clap(name = env!("CARGO_PKG_NAME"), about = "Parses HDR10+ dynamic metadata in HEVC video files", author = "quietvoid", version = env!("CARGO_PKG_VERSION"))]
+#[command(name = env!("CARGO_PKG_NAME"), about = "Parses HDR10+ dynamic metadata in HEVC video files", author = "quietvoid", version = env!("CARGO_PKG_VERSION"))]
 struct Opt {
-    #[clap(long, help = "Checks if input file contains dynamic metadata")]
+    #[arg(long, help = "Checks if input file contains dynamic metadata")]
     verify: bool,
 
-    #[clap(long, help = "Skip profile conformity validation")]
+    #[arg(long, help = "Skip profile conformity validation")]
     skip_validation: bool,
 
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Command,
 }
 

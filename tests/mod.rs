@@ -13,7 +13,7 @@ fn help() -> Result<()> {
         .success()
         .stderr(predicate::str::is_empty())
         .stdout(predicate::str::contains(
-            "hdr10plus_tool [OPTIONS] <SUBCOMMAND>",
+            "hdr10plus_tool [OPTIONS] <COMMAND>",
         ));
     Ok(())
 }

@@ -11,22 +11,22 @@ pub mod remove;
 
 #[derive(Parser, Debug)]
 pub enum Command {
-    #[clap(about = "Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file")]
+    #[command(about = "Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file")]
     Extract(ExtractArgs),
 
-    #[clap(
+    #[command(
         about = "Interleaves HDR10+ metadata NAL units before slices in an HEVC encoded bitstream"
     )]
     Inject(InjectArgs),
 
-    #[clap(about = "Removes HDR10+ metadata SEI messages in an HEVC encoded bitstream")]
+    #[command(about = "Removes HDR10+ metadata SEI messages in an HEVC encoded bitstream")]
     Remove(RemoveArgs),
 }
 
 #[derive(Args, Debug)]
 pub struct ExtractArgs {
-    #[clap(
-        name = "input",
+    #[arg(
+        id = "input",
         help = "Sets the input HEVC file to use, or piped with -",
         long,
         short = 'i',
@@ -36,8 +36,8 @@ pub struct ExtractArgs {
     )]
     pub input: Option<PathBuf>,
 
-    #[clap(
-        name = "input_pos",
+    #[arg(
+        id = "input_pos",
         help = "Sets the input HEVC file to use, or piped with - (positional)",
         conflicts_with = "input",
         required_unless_present = "input",
@@ -45,7 +45,7 @@ pub struct ExtractArgs {
     )]
     pub input_pos: Option<PathBuf>,
 
-    #[clap(
+    #[arg(
         long,
         short = 'o',
         help = "Sets the output JSON file to use",
@@ -56,8 +56,8 @@ pub struct ExtractArgs {
 
 #[derive(Args, Debug)]
 pub struct InjectArgs {
-    #[clap(
-        name = "input",
+    #[arg(
+        id = "input",
         help = "Sets the input HEVC file to use",
         long,
         short = 'i',
@@ -67,8 +67,8 @@ pub struct InjectArgs {
     )]
     pub input: Option<PathBuf>,
 
-    #[clap(
-        name = "input_pos",
+    #[arg(
+        id = "input_pos",
         help = "Sets the input HEVC file to use (positional)",
         conflicts_with = "input",
         required_unless_present = "input",
@@ -76,7 +76,7 @@ pub struct InjectArgs {
     )]
     pub input_pos: Option<PathBuf>,
 
-    #[clap(
+    #[arg(
         long,
         short = 'j',
         help = "Sets the input JSON file to use",
@@ -84,7 +84,7 @@ pub struct InjectArgs {
     )]
     pub json: PathBuf,
 
-    #[clap(
+    #[arg(
         long,
         short = 'o',
         help = "Output HEVC file location",
@@ -95,8 +95,8 @@ pub struct InjectArgs {
 
 #[derive(Args, Debug)]
 pub struct RemoveArgs {
-    #[clap(
-        name = "input",
+    #[arg(
+        id = "input",
         help = "Sets the input HEVC file to use, or piped with -",
         long,
         short = 'i',
@@ -106,8 +106,8 @@ pub struct RemoveArgs {
     )]
     pub input: Option<PathBuf>,
 
-    #[clap(
-        name = "input_pos",
+    #[arg(
+        id = "input_pos",
         help = "Sets the input HEVC file to use, or piped with - (positional)",
         conflicts_with = "input",
         required_unless_present = "input",
@@ -115,7 +115,7 @@ pub struct RemoveArgs {
     )]
     pub input_pos: Option<PathBuf>,
 
-    #[clap(
+    #[arg(
         long,
         short = 'o',
         help = "Sets the output HEVC file to use",
