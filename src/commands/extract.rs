@@ -13,6 +13,7 @@ impl Extractor {
             input,
             input_pos,
             output,
+            skip_reorder,
         } = args;
         let input = input_from_either("extract", input, input_pos)?;
 
@@ -27,7 +28,7 @@ impl Extractor {
         };
 
         let pb = initialize_progress_bar(&format, &input)?;
-        let mut parser = Parser::new(input, output, options, pb);
+        let mut parser = Parser::new(input, output, options, pb, skip_reorder);
 
         parser.process_input(&format)
     }

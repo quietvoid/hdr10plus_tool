@@ -31,6 +31,7 @@ pub struct Parser {
     progress_bar: ProgressBar,
 
     hdr10plus_sei_list: Vec<MetadataFrame>,
+    skip_reorder: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +47,7 @@ impl Parser {
         output: Option<PathBuf>,
         options: CliOptions,
         progress_bar: ProgressBar,
+        skip_reorder: bool,
     ) -> Self {
         Self {
             input,
@@ -53,6 +55,7 @@ impl Parser {
             options,
             progress_bar,
             hdr10plus_sei_list: Vec::new(),
+            skip_reorder,
         }
     }
 
@@ -254,7 +257,7 @@ impl IoProcessor for Parser {
         }
 
         // Reorder to display output order
-        if !self.options.skip_reorder {
+        if !self.skip_reorder {
             self.reorder_metadata(frames);
         }
 

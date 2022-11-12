@@ -20,12 +20,6 @@ struct Opt {
     #[arg(long, help = "Skip profile conformity validation")]
     skip_validation: bool,
 
-    #[arg(
-        long,
-        help = "Skip metadata reordering, workaround for invalid HEVC files"
-    )]
-    skip_reorder: bool,
-
     #[command(subcommand)]
     cmd: Command,
 }
@@ -34,7 +28,6 @@ struct Opt {
 pub struct CliOptions {
     pub verify: bool,
     pub validate: bool,
-    pub skip_reorder: bool,
 }
 
 fn main() -> Result<()> {
@@ -43,7 +36,6 @@ fn main() -> Result<()> {
     let cli_options = CliOptions {
         verify: opt.verify,
         validate: !opt.skip_validation,
-        skip_reorder: opt.skip_reorder,
     };
 
     let res = match opt.cmd {

@@ -14,9 +14,6 @@ The minimum Rust version to build **`hdr10plus_tool`** is 1.57.0.
 Options that apply to the commands:
 * `--verify` Checks if input file contains dynamic metadata.
 * `--skip-validation` Skip profile conformity validation. Invalid metadata is set to profile `N/A`.
-* `--skip-reorder` Skip metadata reordering after extracting.
-    - This can only be used when extracting to JSON with `extract`.
-    - [Explanation on when to use `--skip-reorder`](README.md#wrong-metadata-order-workaround).
 
 &nbsp;
 
@@ -26,6 +23,10 @@ Options that apply to the commands:
     Also calculates the scene information for compatibility with Samsung tools.  
 
     If no output is specified, the file is only parsed partially to verify presence of metadata.
+
+    **Flags**:
+    * `--skip-reorder` Skip metadata reordering after extracting.
+        - [Explanation on when to use `--skip-reorder`](README.md#wrong-metadata-order-workaround).
 
     **Examples**:
     ```console

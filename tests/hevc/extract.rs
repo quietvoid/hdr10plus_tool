@@ -1938,3 +1938,54 @@ fn dhdr10_opt_gaps() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn pts_injected() -> Result<()> {
+    let mut cmd = Command::cargo_bin(TOOL_NAME)?;
+
+    let input_file = Path::new("assets/hevc_tests/pts_injected.hevc");
+    let temp = assert_fs::TempDir::new()?;
+
+    let output_json = temp.child("metadata.json");
+    let expected_json = Path::new("assets/hevc_tests/metadata-dhdr10-opt.json");
+
+    let assert = cmd
+        .arg(SUBCOMMAND)
+        .arg(input_file)
+        .arg("--output")
+        .arg(output_json.as_ref())
+        .assert();
+
+    assert.success().stderr(predicate::str::is_empty());
+    output_json
+        .assert(predicate::path::is_file())
+        .assert(predicate::path::eq_file(expected_json));
+
+    Ok(())
+}
+
+#[test]
+fn dts_injected() -> Result<()> {
+    let mut cmd = Command::cargo_bin(TOOL_NAME)?;
+
+    let input_file = Path::new("assets/hevc_tests/dts_injected.hevc");
+    let temp = assert_fs::TempDir::new()?;
+
+    let output_json = temp.child("metadata.json");
+    let expected_json = Path::new("assets/hevc_tests/metadata-dhdr10-opt.json");
+
+    let assert = cmd
+        .arg(SUBCOMMAND)
+        .arg("--skip-reorder")
+        .arg(input_file)
+        .arg("--output")
+        .arg(output_json.as_ref())
+        .assert();
+
+    assert.success().stderr(predicate::str::is_empty());
+    output_json
+        .assert(predicate::path::is_file())
+        .assert(predicate::path::eq_file(expected_json));
+
+    Ok(())
+}

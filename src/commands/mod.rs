@@ -52,6 +52,12 @@ pub struct ExtractArgs {
         value_hint = ValueHint::FilePath
     )]
     pub output: Option<PathBuf>,
+
+    #[arg(
+        long,
+        help = "Skip metadata reordering, workaround for misauthored HEVC files"
+    )]
+    skip_reorder: bool,
 }
 
 #[derive(Args, Debug)]
