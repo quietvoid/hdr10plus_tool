@@ -85,6 +85,14 @@ pub struct BezierCurve {
     pub bezier_curve_anchors: Vec<u16>,
 }
 
+#[derive(Debug, PartialEq, Clone, Eq)]
+pub struct Hdr10PlusMetadataEncOpts {
+    /// Validate the metadata's conformance
+    pub validate: bool,
+    /// Useful for AV1 payload, which don't contain `itu_t_t35_country_code`
+    pub with_country_code: bool,
+}
+
 impl Hdr10PlusMetadata {
     pub fn parse(data: Vec<u8>) -> Result<Hdr10PlusMetadata> {
         let mut reader = BitVecReader::new(data);
@@ -237,14 +245,17 @@ impl Hdr10PlusMetadata {
         self.profile = profile.to_string();
     }
 
-    pub fn encode(&self, validate: bool) -> Result<Vec<u8>> {
-        if validate {
+    pub fn encode_with_opts(&self, opts: &Hdr10PlusMetadataEncOpts) -> Result<Vec<u8>> {
+        if opts.validate {
             self.validate()?;
         }
 
         let mut writer = BitVecWriter::new();
 
-        writer.write_n(&self.itu_t_t35_country_code.to_be_bytes(), 8);
+        if opts.with_country_code {
+            writer.write_n(&self.itu_t_t35_country_code.to_be_bytes(), 8);
+        }
+
         writer.write_n(&self.itu_t_t35_terminal_provider_code.to_be_bytes(), 16);
         writer.write_n(
             &self.itu_t_t35_terminal_provider_oriented_code.to_be_bytes(),
@@ -306,6 +317,16 @@ impl Hdr10PlusMetadata {
         let payload = writer.as_slice().to_vec();
 
         Ok(payload)
+    }
+
+    #[deprecated(since = "1.2.0", note = "Replaced by encode_with_opts")]
+    pub fn encode(&self, validate: bool) -> Result<Vec<u8>> {
+        let opts = Hdr10PlusMetadataEncOpts {
+            validate,
+            ..Default::default()
+        };
+
+        self.encode_with_opts(&opts)
     }
 
     fn validate_v1(&self) -> Result<()> {
@@ -573,5 +594,14 @@ impl BezierCurve {
         self.bezier_curve_anchors
             .iter()
             .for_each(|e| writer.write_n(&e.to_be_bytes(), 10));
+    }
+}
+
+impl Default for Hdr10PlusMetadataEncOpts {
+    fn default() -> Self {
+        Self {
+            validate: true,
+            with_country_code: true,
+        }
     }
 }

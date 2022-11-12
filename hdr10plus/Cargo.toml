@@ -1,6 +1,6 @@
 [package]
 name = "hdr10plus"
-version = "1.1.2"
+version = "1.2.0"
 authors = ["quietvoid"]
 edition = "2021"
 rust-version = "1.56.1"

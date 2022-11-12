@@ -5,10 +5,15 @@ use bitvec_helpers::bitvec_writer::BitVecWriter;
 use hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
 use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
 
-use super::metadata::Hdr10PlusMetadata;
+use super::metadata::{Hdr10PlusMetadata, Hdr10PlusMetadataEncOpts};
 use super::metadata_json::Hdr10PlusJsonMetadata;
 
 pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Result<Vec<u8>> {
+    let opts = Hdr10PlusMetadataEncOpts {
+        validate,
+        ..Default::default()
+    };
+
     // Write NALU SEI_PREFIX header
     let mut header_writer = BitVecWriter::new();
 
@@ -20,7 +25,7 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
 
     header_writer.write_n(&USER_DATA_REGISTERED_ITU_T_35.to_be_bytes(), 8);
 
-    let mut payload = metadata.encode(validate)?;
+    let mut payload = metadata.encode_with_opts(&opts)?;
 
     // FIXME: This should probably be 1024 but not sure how to write a longer header
     ensure!(
