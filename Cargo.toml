@@ -25,3 +25,8 @@ predicates = "2.1.2"
 [[bin]]
 name = "hdr10plus_tool"
 path = "src/main.rs"
+
+[workspace]
+members = [
+    "hdr10plus",
+]
