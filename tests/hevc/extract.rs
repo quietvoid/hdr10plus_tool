@@ -1922,3 +1922,19 @@ fn multimsg_sei_metadata() {
         vec![143, 298, 447, 592, 731, 864, 891, 917, 938]
     );
 }
+
+#[test]
+fn dhdr10_opt_gaps() -> Result<()> {
+    let input_file = Path::new("assets/hevc_tests/dhdr10-opt.hevc");
+    let temp = assert_fs::TempDir::new()?;
+
+    let output_json = temp.child("metadata.json");
+    let expected_json = Path::new("assets/hevc_tests/metadata-dhdr10-opt.json");
+
+    assert_cmd_output(input_file, output_json.as_ref(), true)?;
+    output_json
+        .assert(predicate::path::is_file())
+        .assert(predicate::path::eq_file(expected_json));
+
+    Ok(())
+}

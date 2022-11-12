@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use hevc_parser::utils::{
     add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
 };
@@ -30,14 +30,14 @@ pub struct Parser {
     options: CliOptions,
     progress_bar: ProgressBar,
 
-    hdr10plus_sei_list: Vec<Vec<u8>>,
+    hdr10plus_sei_list: Vec<MetadataFrame>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct MetadataFrame {
-    pub decoded_index: usize,
+    pub decoded_index: u64,
     pub presentation_number: usize,
-    pub metadata: Hdr10PlusMetadata,
+    pub metadata: Option<Vec<u8>>,
 }
 
 impl Parser {
@@ -90,7 +90,22 @@ impl Parser {
                     let mut bytes = sei_payload[start..end].to_vec();
                     add_start_code_emulation_prevention_3_byte(&mut bytes);
 
-                    self.hdr10plus_sei_list.push(bytes);
+                    self.hdr10plus_sei_list.push(MetadataFrame {
+                        decoded_index: nal.decoded_frame_index,
+                        presentation_number: 0,
+                        metadata: Some(bytes),
+                    });
+                }
+            }
+
+            if let Some(last_meta) = self.hdr10plus_sei_list.last() {
+                // Slice and no metadata for this index, means there was nothing in SEI prefix
+                if nal.is_slice() && last_meta.decoded_index < nal.decoded_frame_index {
+                    self.hdr10plus_sei_list.push(MetadataFrame {
+                        decoded_index: nal.decoded_frame_index,
+                        presentation_number: 0,
+                        metadata: None,
+                    });
                 }
             }
         }
@@ -104,14 +119,14 @@ impl Parser {
         Ok(())
     }
 
-    pub fn parse_metadata_list(&mut self) -> Result<Vec<MetadataFrame>> {
+    pub fn parse_metadata_list(&self, sei_list: &Vec<&Vec<u8>>) -> Result<Vec<Hdr10PlusMetadata>> {
         print!("Reading parsed dynamic metadata... ");
         stdout().flush().ok();
 
-        let mut complete_metadata: Vec<MetadataFrame> = Vec::new();
+        let mut complete_metadata = Vec::new();
 
         //Loop over lines and read metadata, HDR10+ LLC format
-        for (index, data) in self.hdr10plus_sei_list.iter().enumerate() {
+        for data in sei_list {
             let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(data);
 
             // Parse metadata
@@ -122,13 +137,7 @@ impl Parser {
                 metadata.validate()?;
             }
 
-            let metadata_frame = MetadataFrame {
-                decoded_index: index,
-                presentation_number: 0,
-                metadata,
-            };
-
-            complete_metadata.push(metadata_frame);
+            complete_metadata.push(metadata);
         }
 
         println!("Done.");
@@ -136,7 +145,7 @@ impl Parser {
         Ok(complete_metadata)
     }
 
-    fn write_json(&self, metadata: Vec<MetadataFrame>) -> Result<()> {
+    fn write_json(&self, metadata: Vec<Hdr10PlusMetadata>) -> Result<()> {
         match &self.output {
             Some(path) => {
                 let save_file = File::create(path).expect("Can't create file");
@@ -145,8 +154,7 @@ impl Parser {
                 print!("Generating and writing metadata to JSON file... ");
                 stdout().flush().ok();
 
-                let list: Vec<&Hdr10PlusMetadata> =
-                    metadata.iter().map(|mf| &mf.metadata).collect();
+                let list: Vec<&Hdr10PlusMetadata> = metadata.iter().collect();
                 let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
 
                 writeln!(writer, "{}", serde_json::to_string_pretty(&final_json)?)?;
@@ -161,14 +169,14 @@ impl Parser {
         Ok(())
     }
 
-    pub fn reorder_metadata(&self, frames: &[Frame], metadata: &mut [MetadataFrame]) {
+    pub fn reorder_metadata(&mut self, frames: &[Frame]) {
         print!("Reordering metadata... ");
         stdout().flush().ok();
 
-        metadata.sort_by_cached_key(|m| {
+        self.hdr10plus_sei_list.sort_by_cached_key(|m| {
             let matching_index = frames
                 .iter()
-                .position(|f| m.decoded_index == f.decoded_number as usize);
+                .position(|f| m.decoded_index == f.decoded_number);
 
             if let Some(i) = matching_index {
                 frames[i].presentation_number
@@ -180,10 +188,35 @@ impl Parser {
             }
         });
 
-        metadata
+        self.hdr10plus_sei_list
             .iter_mut()
             .enumerate()
-            .for_each(|(idx, m)| m.presentation_number = idx);
+            .for_each(|(idx, m)| {
+                m.presentation_number = idx;
+            });
+
+        println!("Done.");
+    }
+
+    pub fn fill_metadata_gaps(&mut self) {
+        print!("Filling metadata gaps... ");
+        stdout().flush().ok();
+
+        let present_meta_list: Vec<(usize, Vec<u8>)> = self
+            .hdr10plus_sei_list
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.metadata.is_some())
+            .map(|(idx, e)| (idx, e.metadata.as_ref().unwrap().clone()))
+            .collect();
+
+        for (idx, bytes) in present_meta_list {
+            self.hdr10plus_sei_list
+                .iter_mut()
+                .skip(idx + 1)
+                .take_while(|e| e.metadata.is_none())
+                .for_each(|e| e.metadata = Some(bytes.clone()));
+        }
 
         println!("Done.");
     }
@@ -209,15 +242,29 @@ impl IoProcessor for Parser {
             bail!(ParserError::NoMetadataFound);
         }
 
-        let mut final_metadata = self.parse_metadata_list()?;
+        let frames = parser.ordered_frames();
+        ensure!(self.hdr10plus_sei_list.len() == frames.len());
+
+        let has_metadata_gaps = self.hdr10plus_sei_list.iter().any(|e| e.metadata.is_none());
+
+        // Same behaviour as FFmpeg
+        // Use metadata from previous SEI by decode order and reorder after
+        if has_metadata_gaps {
+            self.fill_metadata_gaps();
+        }
+
+        // Reorder to display output order
+        self.reorder_metadata(frames);
+
+        let ordered_sei_list = self
+            .hdr10plus_sei_list
+            .iter()
+            .map(|e| e.metadata.as_ref().unwrap())
+            .collect();
+        let final_metadata = self.parse_metadata_list(&ordered_sei_list)?;
 
         // Sucessful parse & no --verify
         if !final_metadata.is_empty() {
-            let frames = parser.ordered_frames();
-
-            // Reorder to display output order
-            self.reorder_metadata(frames, &mut final_metadata);
-
             self.write_json(final_metadata)?;
         } else {
             bail!("Failed reading parsed metadata.");
