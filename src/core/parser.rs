@@ -254,7 +254,9 @@ impl IoProcessor for Parser {
         }
 
         // Reorder to display output order
-        self.reorder_metadata(frames);
+        if !self.options.skip_reorder {
+            self.reorder_metadata(frames);
+        }
 
         let ordered_sei_list = self
             .hdr10plus_sei_list

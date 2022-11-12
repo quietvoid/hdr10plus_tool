@@ -14,6 +14,11 @@ The minimum Rust version to build **`hdr10plus_tool`** is 1.57.0.
 Options that apply to the commands:
 * `--verify` Checks if input file contains dynamic metadata.
 * `--skip-validation` Skip profile conformity validation. Invalid metadata is set to profile `N/A`.
+* `--skip-reorder` Skip metadata reordering after extracting.
+    - This can only be used when extracting to JSON with `extract`.
+    - [Explanation on when to use `--skip-reorder`](README.md#wrong-metadata-order-workaround).
+
+&nbsp;
 
 ## Commands
 * ### **extract**
@@ -57,6 +62,19 @@ Options that apply to the commands:
     ```console
     ffmpeg -i input.mkv -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool remove -
     ```
+&nbsp;
+
+### Wrong metadata order workaround
+The `skip-reorder` option should only be used as a workaround for misauthored HEVC files.  
+Some rare retail discs use an incorrect workflow where the original metadata is inserted sequentially in the final video, which causes issues when B frames exist.  
+As the metadata is inserted for every frame in **decode order**, on playback it is likely that the **presentation order** is different.  
+In playback, this means that the metadata associated with the image presented may be wrong.
+
+A simple way to tell if the metadata is in the wrong order is by looking at the `SceneFrameNumbers` list in the JSON.  
+If there are many entries where scenes only contain 1 to 3 frames, it is likely that the video has wrong order.  
+The `SceneFirstFrameIndex` values should also be aligned with scene cuts in the video.  
+If the scenes are small and misaligned, `skip-reorder` must be used when using `extract` to keep the order correct.
+
 &nbsp;
 
 ## Sample files
