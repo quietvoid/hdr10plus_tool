@@ -15,8 +15,6 @@ Options that apply to the commands:
 * `--verify` Checks if input file contains dynamic metadata.
 * `--skip-validation` Skip profile conformity validation. Invalid metadata is set to profile `N/A`.
 
-&nbsp;
-
 ## Commands
 * ### **extract**
     Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file.  
