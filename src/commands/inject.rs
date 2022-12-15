@@ -57,10 +57,8 @@ impl Injector {
         let chunk_size = 100_000;
         let progress_bar = initialize_progress_bar(&IoFormat::Raw, &input)?;
 
-        let writer = BufWriter::with_capacity(
-            chunk_size,
-            File::create(&output).expect("Can't create file"),
-        );
+        let writer =
+            BufWriter::with_capacity(chunk_size, File::create(output).expect("Can't create file"));
 
         let mut injector = Injector {
             input,

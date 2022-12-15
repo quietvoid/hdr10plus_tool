@@ -46,7 +46,7 @@ impl Remover {
             progress_bar: pb,
             writer: BufWriter::with_capacity(
                 100_000,
-                File::create(&hevc_out).expect("Can't create file"),
+                File::create(hevc_out).expect("Can't create file"),
             ),
         };
 
