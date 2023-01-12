@@ -7,20 +7,20 @@ rust-version = "1.57.0"
 license = "MIT"
 
 [dependencies]
-bitvec_helpers = "2.0.0"
+bitvec_helpers = "2.0.1"
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
 hevc_parser = { version = "0.5.2", features = ["hevc_io"] }
 
-clap = { version = "4.0.23", features = ["derive", "wrap_help", "deprecated"] }
-serde_json = { version = "1.0.87", features = ["preserve_order"] }
+clap = { version = "4.0.32", features = ["derive", "wrap_help", "deprecated"] }
+serde_json = { version = "1.0.91", features = ["preserve_order"] }
 indicatif = "0.17.2"
-anyhow = "1.0.66"
-thiserror = "1.0.37"
+anyhow = "1.0.68"
+thiserror = "1.0.38"
 
 [dev-dependencies]
-assert_cmd = "2.0.6"
-assert_fs = "1.0.9"
-predicates = "2.1.2"
+assert_cmd = "2.0.8"
+assert_fs = "1.0.10"
+predicates = "2.1.5"
 
 [[bin]]
 name = "hdr10plus_tool"
