@@ -3,7 +3,7 @@ name = "hdr10plus_tool"
 version = "1.5.1"
 authors = ["quietvoid"]
 edition = "2021"
-rust-version = "1.57.0"
+rust-version = "1.64.0"
 license = "MIT"
 
 [dependencies]
