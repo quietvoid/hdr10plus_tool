@@ -252,7 +252,7 @@ impl Hdr10PlusMetadata {
             self.validate()?;
         }
 
-        let mut writer = BitstreamIoWriter::with_capacity(0);
+        let mut writer = BitstreamIoWriter::with_capacity(64 * 8);
 
         if opts.with_country_code {
             writer.write_n(&self.itu_t_t35_country_code, 8)?;
