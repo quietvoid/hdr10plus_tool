@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use anyhow::{ensure, Result};
-use bitvec_helpers::bitvec_writer::BitVecWriter;
+use bitvec_helpers::bitstream_io_writer::BitstreamIoWriter;
 use hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
 use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
 
@@ -15,15 +15,15 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
     };
 
     // Write NALU SEI_PREFIX header
-    let mut header_writer = BitVecWriter::new();
+    let mut header_writer = BitstreamIoWriter::with_capacity(0);
 
-    header_writer.write(false); // forbidden_zero_bit
+    header_writer.write(false)?; // forbidden_zero_bit
 
-    header_writer.write_n(&NAL_SEI_PREFIX.to_be_bytes(), 6); // nal_type
-    header_writer.write_n(&(0_u8).to_be_bytes(), 6); // nuh_layer_id
-    header_writer.write_n(&(1_u8).to_be_bytes(), 3); // nuh_temporal_id_plus1
+    header_writer.write_n(&NAL_SEI_PREFIX, 6)?; // nal_type
+    header_writer.write_n(&(0_u8), 6)?; // nuh_layer_id
+    header_writer.write_n(&(1_u8), 3)?; // nuh_temporal_id_plus1
 
-    header_writer.write_n(&USER_DATA_REGISTERED_ITU_T_35.to_be_bytes(), 8);
+    header_writer.write_n(&USER_DATA_REGISTERED_ITU_T_35, 8)?;
 
     let mut payload = metadata.encode_with_opts(&opts)?;
 
@@ -34,11 +34,11 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
         payload.len()
     );
 
-    header_writer.write_n(&payload.len().to_be_bytes(), 8);
+    header_writer.write_n(&(payload.len() as u64), 8)?;
 
     payload.push(0x80);
 
-    let mut data = header_writer.as_slice().to_vec();
+    let mut data = header_writer.as_slice().unwrap().to_vec();
     data.append(&mut payload);
 
     add_start_code_emulation_prevention_3_byte(&mut data);

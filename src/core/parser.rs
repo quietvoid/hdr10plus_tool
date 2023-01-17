@@ -133,7 +133,7 @@ impl Parser {
             let bytes = hevc_parser::utils::clear_start_code_emulation_prevention_3_byte(data);
 
             // Parse metadata
-            let metadata = Hdr10PlusMetadata::parse(bytes)?;
+            let metadata = Hdr10PlusMetadata::parse(&bytes)?;
 
             // Validate values
             if self.options.validate {
