@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use bitvec_helpers::bitstream_io_writer::BitstreamIoWriter;
 use hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
 use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
@@ -38,7 +38,10 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
 
     payload.push(0x80);
 
-    let mut data = header_writer.as_slice().unwrap().to_vec();
+    let mut data = header_writer
+        .as_slice()
+        .ok_or_else(|| anyhow!("Unaligned bytes"))?
+        .to_vec();
     data.append(&mut payload);
 
     add_start_code_emulation_prevention_3_byte(&mut data);

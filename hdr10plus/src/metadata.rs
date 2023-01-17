@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use bitvec_helpers::{
     bitstream_io_reader::BsIoSliceReader, bitstream_io_writer::BitstreamIoWriter,
 };
@@ -314,7 +314,10 @@ impl Hdr10PlusMetadata {
 
         writer.byte_align()?;
 
-        let payload = writer.as_slice().unwrap().to_vec();
+        let payload = writer
+            .as_slice()
+            .ok_or_else(|| anyhow!("Unaligned bytes"))?
+            .to_vec();
 
         Ok(payload)
     }
