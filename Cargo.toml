@@ -7,9 +7,9 @@ rust-version = "1.57.0"
 license = "MIT"
 
 [dependencies]
-bitvec_helpers = { version = "3.1.1", default-features = false, features = ["bitstream-io"] }
+bitvec_helpers = { version = "3.1.2", default-features = false, features = ["bitstream-io"] }
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
-hevc_parser = { version = "0.5.2", features = ["hevc_io"] }
+hevc_parser = { version = "0.6.0", features = ["hevc_io"] }
 
 clap = { version = "4.1.1", features = ["derive", "wrap_help", "deprecated"] }
 serde_json = { version = "1.0.91", features = ["preserve_order"] }
