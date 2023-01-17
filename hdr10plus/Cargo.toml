@@ -1,6 +1,6 @@
 [package]
 name = "hdr10plus"
-version = "1.2.0"
+version = "2.0.0"
 authors = ["quietvoid"]
 edition = "2021"
 rust-version = "1.56.1"
@@ -8,10 +8,8 @@ license = "MIT"
 description = "HDR10+ metadata parsing and writing"
 repository = "https://github.com/quietvoid/hdr10plus_tool/tree/master/hdr10plus"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-bitvec_helpers = "2.0.1"
+bitvec_helpers = { version = "3.1.1", default-features = false, features = ["bitstream-io"] }
 anyhow = "1.0.68"
 serde = { version = "1.0.152", features = ["derive"], optional = true }
 serde_json = { version = "1.0.91", features = ["preserve_order"], optional = true }

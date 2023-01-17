@@ -1,5 +1,7 @@
 use anyhow::{bail, ensure, Result};
-use bitvec_helpers::{bitvec_reader::BitVecReader, bitvec_writer::BitVecWriter};
+use bitvec_helpers::{
+    bitstream_io_reader::BsIoSliceReader, bitstream_io_writer::BitstreamIoWriter,
+};
 
 const DISTRIBUTION_INDEXES_9: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 99];
 const DISTRIBUTION_INDEXES_10: &[u8] = &[1, 5, 10, 25, 50, 75, 90, 95, 98, 99];
@@ -94,8 +96,8 @@ pub struct Hdr10PlusMetadataEncOpts {
 }
 
 impl Hdr10PlusMetadata {
-    pub fn parse(data: Vec<u8>) -> Result<Hdr10PlusMetadata> {
-        let mut reader = BitVecReader::new(data);
+    pub fn parse(data: &[u8]) -> Result<Hdr10PlusMetadata> {
+        let mut reader = BsIoSliceReader::from_slice(data);
 
         let mut meta = Hdr10PlusMetadata {
             itu_t_t35_country_code: reader.get_n(8)?,
@@ -250,71 +252,69 @@ impl Hdr10PlusMetadata {
             self.validate()?;
         }
 
-        let mut writer = BitVecWriter::new();
+        let mut writer = BitstreamIoWriter::with_capacity(0);
 
         if opts.with_country_code {
-            writer.write_n(&self.itu_t_t35_country_code.to_be_bytes(), 8);
+            writer.write_n(&self.itu_t_t35_country_code, 8)?;
         }
 
-        writer.write_n(&self.itu_t_t35_terminal_provider_code.to_be_bytes(), 16);
-        writer.write_n(
-            &self.itu_t_t35_terminal_provider_oriented_code.to_be_bytes(),
-            16,
-        );
-        writer.write_n(&self.application_identifier.to_be_bytes(), 8);
-        writer.write_n(&self.application_version.to_be_bytes(), 8);
-        writer.write_n(&self.num_windows.to_be_bytes(), 2);
+        writer.write_n(&self.itu_t_t35_terminal_provider_code, 16)?;
+        writer.write_n(&self.itu_t_t35_terminal_provider_oriented_code, 16)?;
+        writer.write_n(&self.application_identifier, 8)?;
+        writer.write_n(&self.application_version, 8)?;
+        writer.write_n(&self.num_windows, 2)?;
 
         if let Some(pws) = &self.processing_windows {
-            pws.iter().for_each(|pw| pw.encode(&mut writer));
-        }
-
-        writer.write_n(
-            &self.targeted_system_display_maximum_luminance.to_be_bytes(),
-            27,
-        );
-
-        writer.write(self.targeted_system_display_actual_peak_luminance_flag);
-        if let Some(atsd) = &self.actual_targeted_system_display {
-            atsd.encode(&mut writer);
-        }
-
-        for _ in 0..self.num_windows {
-            self.maxscl
-                .iter()
-                .for_each(|e| writer.write_n(&e.to_be_bytes(), 17));
-
-            writer.write_n(&self.average_maxrgb.to_be_bytes(), 17);
-
-            writer.write_n(&self.num_distribution_maxrgb_percentiles.to_be_bytes(), 4);
-
-            self.distribution_maxrgb
-                .iter()
-                .for_each(|e| e.encode(&mut writer));
-
-            writer.write_n(&self.fraction_bright_pixels.to_be_bytes(), 10);
-        }
-
-        writer.write(self.mastering_display_actual_peak_luminance_flag);
-
-        if let Some(amd) = &self.actual_mastering_display {
-            amd.encode(&mut writer);
-        }
-
-        for _ in 0..self.num_windows {
-            writer.write(self.tone_mapping_flag);
-
-            if let Some(bc) = &self.bezier_curve {
-                bc.encode(&mut writer);
+            for pw in pws {
+                pw.encode(&mut writer)?;
             }
         }
 
-        writer.write(self.color_saturation_mapping_flag);
-        if self.color_saturation_mapping_flag {
-            writer.write_n(&self.color_saturation_weight.to_be_bytes(), 6);
+        writer.write_n(&self.targeted_system_display_maximum_luminance, 27)?;
+
+        writer.write(self.targeted_system_display_actual_peak_luminance_flag)?;
+        if let Some(atsd) = &self.actual_targeted_system_display {
+            atsd.encode(&mut writer)?;
         }
 
-        let payload = writer.as_slice().to_vec();
+        for _ in 0..self.num_windows {
+            for e in &self.maxscl {
+                writer.write_n(e, 17)?;
+            }
+
+            writer.write_n(&self.average_maxrgb, 17)?;
+
+            writer.write_n(&self.num_distribution_maxrgb_percentiles, 4)?;
+
+            for dm in &self.distribution_maxrgb {
+                dm.encode(&mut writer)?;
+            }
+
+            writer.write_n(&self.fraction_bright_pixels, 10)?;
+        }
+
+        writer.write(self.mastering_display_actual_peak_luminance_flag)?;
+
+        if let Some(amd) = &self.actual_mastering_display {
+            amd.encode(&mut writer)?;
+        }
+
+        for _ in 0..self.num_windows {
+            writer.write(self.tone_mapping_flag)?;
+
+            if let Some(bc) = &self.bezier_curve {
+                bc.encode(&mut writer)?;
+            }
+        }
+
+        writer.write(self.color_saturation_mapping_flag)?;
+        if self.color_saturation_mapping_flag {
+            writer.write_n(&self.color_saturation_weight, 6)?;
+        }
+
+        writer.byte_align()?;
+
+        let payload = writer.as_slice().unwrap().to_vec();
 
         Ok(payload)
     }
@@ -356,7 +356,7 @@ impl Hdr10PlusMetadata {
 }
 
 impl DistributionMaxRgb {
-    pub fn parse(reader: &mut BitVecReader) -> Result<DistributionMaxRgb> {
+    fn parse(reader: &mut BsIoSliceReader) -> Result<DistributionMaxRgb> {
         Ok(DistributionMaxRgb {
             percentage: reader.get_n(7)?,
             percentile: reader.get_n(17)?,
@@ -404,14 +404,16 @@ impl DistributionMaxRgb {
         Ok(())
     }
 
-    pub fn encode(&self, writer: &mut BitVecWriter) {
-        writer.write_n(&self.percentage.to_be_bytes(), 7);
-        writer.write_n(&self.percentile.to_be_bytes(), 17);
+    fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
+        writer.write_n(&self.percentage, 7)?;
+        writer.write_n(&self.percentile, 17)?;
+
+        Ok(())
     }
 }
 
 impl ProcessingWindow {
-    pub fn parse(reader: &mut BitVecReader) -> Result<ProcessingWindow> {
+    fn parse(reader: &mut BsIoSliceReader) -> Result<ProcessingWindow> {
         Ok(ProcessingWindow {
             window_upper_left_corner_x: reader.get_n(16)?,
             window_upper_left_corner_y: reader.get_n(16)?,
@@ -427,23 +429,25 @@ impl ProcessingWindow {
         })
     }
 
-    pub fn encode(&self, writer: &mut BitVecWriter) {
-        writer.write_n(&self.window_upper_left_corner_x.to_be_bytes(), 16);
-        writer.write_n(&self.window_upper_left_corner_y.to_be_bytes(), 16);
-        writer.write_n(&self.window_lower_right_corner_x.to_be_bytes(), 16);
-        writer.write_n(&self.window_lower_right_corner_y.to_be_bytes(), 16);
-        writer.write_n(&self.center_of_ellipse_x.to_be_bytes(), 16);
-        writer.write_n(&self.center_of_ellipse_y.to_be_bytes(), 16);
-        writer.write_n(&self.rotation_angle.to_be_bytes(), 8);
-        writer.write_n(&self.semimajor_axis_internal_ellipse.to_be_bytes(), 16);
-        writer.write_n(&self.semimajor_axis_external_ellipse.to_be_bytes(), 16);
-        writer.write_n(&self.semimajor_axis_external_ellipse.to_be_bytes(), 16);
-        writer.write(self.overlap_process_option);
+    fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
+        writer.write_n(&self.window_upper_left_corner_x, 16)?;
+        writer.write_n(&self.window_upper_left_corner_y, 16)?;
+        writer.write_n(&self.window_lower_right_corner_x, 16)?;
+        writer.write_n(&self.window_lower_right_corner_y, 16)?;
+        writer.write_n(&self.center_of_ellipse_x, 16)?;
+        writer.write_n(&self.center_of_ellipse_y, 16)?;
+        writer.write_n(&self.rotation_angle, 8)?;
+        writer.write_n(&self.semimajor_axis_internal_ellipse, 16)?;
+        writer.write_n(&self.semimajor_axis_external_ellipse, 16)?;
+        writer.write_n(&self.semimajor_axis_external_ellipse, 16)?;
+        writer.write(self.overlap_process_option)?;
+
+        Ok(())
     }
 }
 
 impl ActualTargetedSystemDisplay {
-    pub fn parse(reader: &mut BitVecReader) -> Result<ActualTargetedSystemDisplay> {
+    fn parse(reader: &mut BsIoSliceReader) -> Result<ActualTargetedSystemDisplay> {
         let mut atsd = ActualTargetedSystemDisplay {
             num_rows_targeted_system_display_actual_peak_luminance: reader.get_n(5)?,
             num_cols_targeted_system_display_actual_peak_luminance: reader.get_n(5)?,
@@ -464,33 +468,28 @@ impl ActualTargetedSystemDisplay {
         Ok(atsd)
     }
 
-    pub fn encode(&self, writer: &mut BitVecWriter) {
+    fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
         writer.write_n(
-            &self
-                .num_rows_targeted_system_display_actual_peak_luminance
-                .to_be_bytes(),
+            &self.num_rows_targeted_system_display_actual_peak_luminance,
             5,
-        );
+        )?;
         writer.write_n(
-            &self
-                .num_cols_targeted_system_display_actual_peak_luminance
-                .to_be_bytes(),
+            &self.num_cols_targeted_system_display_actual_peak_luminance,
             5,
-        );
+        )?;
 
         for i in 0..self.num_rows_targeted_system_display_actual_peak_luminance as usize {
             for j in 0..self.num_cols_targeted_system_display_actual_peak_luminance as usize {
-                writer.write_n(
-                    &self.targeted_system_display_actual_peak_luminance[i][j].to_be_bytes(),
-                    4,
-                );
+                writer.write_n(&self.targeted_system_display_actual_peak_luminance[i][j], 4)?;
             }
         }
+
+        Ok(())
     }
 }
 
 impl ActualMasteringDisplay {
-    pub fn parse(reader: &mut BitVecReader) -> Result<ActualMasteringDisplay> {
+    fn parse(reader: &mut BsIoSliceReader) -> Result<ActualMasteringDisplay> {
         let mut amd = ActualMasteringDisplay {
             num_rows_mastering_display_actual_peak_luminance: reader.get_n(5)?,
             num_cols_mastering_display_actual_peak_luminanc: reader.get_n(5)?,
@@ -511,33 +510,22 @@ impl ActualMasteringDisplay {
         Ok(amd)
     }
 
-    pub fn encode(&self, writer: &mut BitVecWriter) {
-        writer.write_n(
-            &self
-                .num_rows_mastering_display_actual_peak_luminance
-                .to_be_bytes(),
-            5,
-        );
-        writer.write_n(
-            &self
-                .num_cols_mastering_display_actual_peak_luminanc
-                .to_be_bytes(),
-            5,
-        );
+    fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
+        writer.write_n(&self.num_rows_mastering_display_actual_peak_luminance, 5)?;
+        writer.write_n(&self.num_cols_mastering_display_actual_peak_luminanc, 5)?;
 
         for i in 0..self.num_rows_mastering_display_actual_peak_luminance as usize {
             for j in 0..self.num_cols_mastering_display_actual_peak_luminanc as usize {
-                writer.write_n(
-                    &self.mastering_display_actual_peak_luminance[i][j].to_be_bytes(),
-                    4,
-                );
+                writer.write_n(&self.mastering_display_actual_peak_luminance[i][j], 4)?;
             }
         }
+
+        Ok(())
     }
 }
 
 impl BezierCurve {
-    pub fn parse(reader: &mut BitVecReader) -> Result<BezierCurve> {
+    fn parse(reader: &mut BsIoSliceReader) -> Result<BezierCurve> {
         let mut bc = BezierCurve {
             knee_point_x: reader.get_n(12)?,
             knee_point_y: reader.get_n(12)?,
@@ -586,14 +574,16 @@ impl BezierCurve {
         Ok(())
     }
 
-    pub fn encode(&self, writer: &mut BitVecWriter) {
-        writer.write_n(&self.knee_point_x.to_be_bytes(), 12);
-        writer.write_n(&self.knee_point_y.to_be_bytes(), 12);
-        writer.write_n(&self.num_bezier_curve_anchors.to_be_bytes(), 4);
+    fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
+        writer.write_n(&self.knee_point_x, 12)?;
+        writer.write_n(&self.knee_point_y, 12)?;
+        writer.write_n(&self.num_bezier_curve_anchors, 4)?;
 
-        self.bezier_curve_anchors
-            .iter()
-            .for_each(|e| writer.write_n(&e.to_be_bytes(), 10));
+        for e in &self.bezier_curve_anchors {
+            writer.write_n(e, 10)?;
+        }
+
+        Ok(())
     }
 }
 
