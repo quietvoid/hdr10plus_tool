@@ -48,7 +48,7 @@ fn main() -> Result<()> {
         let err_str = e.to_string();
 
         if err_str == ParserError::MetadataDetected.to_string() {
-            println!("{}", err_str);
+            println!("{err_str}");
             false
         } else {
             true

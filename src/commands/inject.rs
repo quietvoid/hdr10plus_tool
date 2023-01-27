@@ -298,16 +298,23 @@ impl IoProcessor for Injector {
                     });
                 }
             }
-        } else if !self.already_checked_for_hdr10plus
-            && nals.iter().any(|e| {
-                e.nal_type == NAL_SEI_PREFIX
-                    && st2094_40_sei_msg(&chunk[e.start..e.end], self.options.validate)
+        } else if !self.already_checked_for_hdr10plus {
+            let existing_hdr10plus = nals
+                .iter()
+                .filter(|nal| nal.nal_type == NAL_SEI_PREFIX)
+                .any(|nal| {
+                    let sei_payload =
+                        clear_start_code_emulation_prevention_3_byte(&chunk[nal.start..nal.end]);
+
+                    st2094_40_sei_msg(&sei_payload, self.options.validate)
                         .unwrap_or(None)
                         .is_some()
-            })
-        {
-            self.already_checked_for_hdr10plus = true;
-            println!("\nWarning: Input file already has HDR10+ SEIs, they will be replaced.");
+                });
+
+            if existing_hdr10plus {
+                self.already_checked_for_hdr10plus = true;
+                println!("\nWarning: Input file already has HDR10+ SEIs, they will be replaced.");
+            }
         }
 
         Ok(())
