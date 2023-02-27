@@ -3,9 +3,11 @@ use clap::Parser;
 
 mod commands;
 mod core;
+mod utils;
 
 use commands::extract::Extractor;
 use commands::inject::Injector;
+use commands::plot::Plotter;
 use commands::remove::Remover;
 use commands::Command;
 
@@ -42,6 +44,7 @@ fn main() -> Result<()> {
         Command::Extract(args) => Extractor::extract_json(args, cli_options),
         Command::Inject(args) => Injector::inject_json(args, cli_options),
         Command::Remove(args) => Remover::remove_sei(args, cli_options),
+        Command::Plot(args) => Plotter::plot(args),
     };
 
     let actually_errored = if let Err(e) = &res {

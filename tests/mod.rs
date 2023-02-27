@@ -3,6 +3,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 mod hevc;
+mod metadata;
 
 #[test]
 fn help() -> Result<()> {

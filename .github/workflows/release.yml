@@ -47,7 +47,7 @@ jobs:
         if: matrix.build == 'Linux'
         run: |
           rustup target add ${{ env.LINUX_TARGET }}
-          cargo build --release --target ${{ env.LINUX_TARGET }}
+          cargo build --release --target ${{ env.LINUX_TARGET }} --no-default-features --features internal-font
 
       - name: Build (macOS)
         if: matrix.build == 'macOS'

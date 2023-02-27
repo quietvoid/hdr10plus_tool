@@ -4,7 +4,10 @@ use anyhow::{bail, ensure, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::metadata::{BezierCurve, DistributionMaxRgb, Hdr10PlusMetadata};
+use super::metadata::{
+    BezierCurve, DistributionMaxRgb, Hdr10PlusMetadata, PeakBrightnessSource,
+    VariablePeakBrightness,
+};
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct MetadataJsonRoot {
@@ -342,5 +345,43 @@ impl TryFrom<&Hdr10PlusJsonMetadata> for Hdr10PlusMetadata {
         meta.set_profile();
 
         Ok(meta)
+    }
+}
+
+impl VariablePeakBrightness for Hdr10PlusJsonMetadata {
+    fn peak_brightness_nits(&self, source: PeakBrightnessSource) -> Option<f64> {
+        match source {
+            PeakBrightnessSource::Histogram => self
+                .luminance_parameters
+                .luminance_distributions
+                .distribution_values
+                .iter()
+                .max()
+                .map(|e| *e as f64 / 10.0),
+            PeakBrightnessSource::Histogram99 => self
+                .luminance_parameters
+                .luminance_distributions
+                .distribution_values
+                .last()
+                .map(|e| *e as f64 / 10.0),
+            PeakBrightnessSource::MaxScl => self
+                .luminance_parameters
+                .max_scl
+                .iter()
+                .max()
+                .map(|max| *max as f64 / 10.0),
+            PeakBrightnessSource::MaxSclLuminance => {
+                if let [r, g, b] = self.luminance_parameters.max_scl.as_slice() {
+                    let r = *r as f64;
+                    let g = *g as f64;
+                    let b = *b as f64;
+
+                    let luminance = (0.2627 * r) + (0.678 * g) + (0.0593 * b);
+                    Some(luminance / 10.0)
+                } else {
+                    None
+                }
+            }
+        }
     }
 }

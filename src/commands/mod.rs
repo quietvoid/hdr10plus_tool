@@ -2,12 +2,27 @@ use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use clap::{Args, Parser, ValueHint};
+use hdr10plus::metadata::PeakBrightnessSource;
 
 use crate::CliOptions;
 
 pub mod extract;
 pub mod inject;
+pub mod plot;
 pub mod remove;
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArgPeakBrightnessSource {
+    /// The max value from the histogram measurements
+    Histogram,
+    /// The last percentile in the histogram, usually 99.98% brightness percentile
+    Histogram99,
+    /// The max value in `maxscl`
+    MaxScl,
+    /// The luminance calculated from the `maxscl` components
+    /// Assumed BT.2020 primaries
+    MaxSclLuminance,
+}
 
 #[derive(Parser, Debug)]
 pub enum Command {
@@ -21,6 +36,9 @@ pub enum Command {
 
     #[command(about = "Removes HDR10+ metadata SEI messages in an HEVC encoded bitstream")]
     Remove(RemoveArgs),
+
+    #[command(about = "Plot the HDR10+ dynamic brightness metadata")]
+    Plot(PlotArgs),
 }
 
 #[derive(Args, Debug)]
@@ -130,6 +148,49 @@ pub struct RemoveArgs {
     pub output: Option<PathBuf>,
 }
 
+#[derive(Args, Debug)]
+pub struct PlotArgs {
+    #[arg(
+        id = "input",
+        help = "Sets the input JSON file to use",
+        long,
+        short = 'i',
+        conflicts_with = "input_pos",
+        required_unless_present = "input_pos",
+        value_hint = ValueHint::FilePath,
+    )]
+    pub input: Option<PathBuf>,
+
+    #[arg(
+        id = "input_pos",
+        help = "Sets the input JSON file to use (positional)",
+        conflicts_with = "input",
+        required_unless_present = "input",
+        value_hint = ValueHint::FilePath
+    )]
+    pub input_pos: Option<PathBuf>,
+
+    #[arg(
+        long,
+        short = 'o',
+        help = "Output PNG image file location",
+        value_hint = ValueHint::FilePath
+    )]
+    pub output: Option<PathBuf>,
+
+    #[arg(long, short = 't', help = "Title to use at the top")]
+    pub title: Option<String>,
+
+    #[arg(
+        value_enum,
+        short = 'p',
+        long,
+        help = "How to extract the peak brightness for the metadata",
+        default_value = "histogram"
+    )]
+    pub peak_source: ArgPeakBrightnessSource,
+}
+
 pub fn input_from_either(cmd: &str, in1: Option<PathBuf>, in2: Option<PathBuf>) -> Result<PathBuf> {
     match in1 {
         Some(in1) => Ok(in1),
@@ -140,5 +201,16 @@ pub fn input_from_either(cmd: &str, in1: Option<PathBuf>, in2: Option<PathBuf>) 
                 cmd
             ),
         },
+    }
+}
+
+impl From<ArgPeakBrightnessSource> for PeakBrightnessSource {
+    fn from(e: ArgPeakBrightnessSource) -> Self {
+        match e {
+            ArgPeakBrightnessSource::Histogram => Self::Histogram,
+            ArgPeakBrightnessSource::Histogram99 => Self::Histogram99,
+            ArgPeakBrightnessSource::MaxScl => Self::MaxScl,
+            ArgPeakBrightnessSource::MaxSclLuminance => Self::MaxSclLuminance,
+        }
     }
 }

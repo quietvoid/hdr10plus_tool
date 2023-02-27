@@ -9,13 +9,14 @@ license = "MIT"
 [dependencies]
 bitvec_helpers = { version = "3.1.2", default-features = false, features = ["bitstream-io"] }
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
-hevc_parser = { version = "0.6.0", features = ["hevc_io"] }
+hevc_parser = { version = "0.6.1", features = ["hevc_io"] }
 
-clap = { version = "4.1.4", features = ["derive", "wrap_help", "deprecated"] }
-serde_json = { version = "1.0.91", features = ["preserve_order"] }
+clap = { version = "4.1.8", features = ["derive", "wrap_help", "deprecated"] }
+serde_json = { version = "1.0.93", features = ["preserve_order"] }
 indicatif = "0.17.3"
-anyhow = "1.0.68"
+anyhow = "1.0.69"
 thiserror = "1.0.38"
+plotters = { git = "https://github.com/plotters-rs/plotters", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "all_series"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.8"
@@ -30,3 +31,8 @@ path = "src/main.rs"
 members = [
     "hdr10plus",
 ]
+
+[features]
+default = ["system-font"]
+system-font = ["plotters/ttf"]
+internal-font = ["plotters/ab_glyph"]

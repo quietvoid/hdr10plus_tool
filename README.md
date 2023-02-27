@@ -9,6 +9,10 @@ Previously named `hdr10plus_parser`, now it's more than just a parser.
 
 The minimum Rust version to build **`hdr10plus_tool`** is 1.57.0.
 
+### **Dependencies**
+On Linux systems, [fontconfig](https://github.com/yeslogic/fontconfig-rs#dependencies) is required.  
+Alternatively, system fonts can be bypassed by building with `--no-default-features --features internal-font`.
+
 &nbsp;
 
 Options that apply to the commands:
@@ -60,6 +64,20 @@ Options that apply to the commands:
     ```
     ```console
     ffmpeg -i input.mkv -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool remove -
+    ```
+&nbsp;
+* ### **plot**
+    Allows plotting the HDR10+ brightness metadata into a graph.
+    The output is a PNG image.
+
+    **Flags**:
+    - `-t`, `--title` The title to set at the top of the plot
+    - `-p`, `--peak-source` How to extract the peak brightness for the metadata [default: `histogram`]      
+        Possible values: `histogram`, `histogram99`, `max-scl`, `max-scl-luminance`
+
+    **Example**:
+    ```console
+    hdr10plus_tool plot metadata.json -t "HDR10+ plot" -o hdr10plus_plot.png
     ```
 &nbsp;
 

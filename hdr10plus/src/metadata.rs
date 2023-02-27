@@ -95,6 +95,23 @@ pub struct Hdr10PlusMetadataEncOpts {
     pub with_country_code: bool,
 }
 
+/// How to extract the peak brightness for the metadata
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PeakBrightnessSource {
+    /// The max value from the histogram measurements
+    Histogram,
+    /// The last percentile in the histogram, usually 99.98% brightness percentile
+    Histogram99,
+    /// The max value in `maxscl`
+    MaxScl,
+    /// The luminance calculated from the `maxscl` components
+    /// Assumed BT.2020 primaries
+    MaxSclLuminance,
+}
+pub trait VariablePeakBrightness {
+    fn peak_brightness_nits(&self, source: PeakBrightnessSource) -> Option<f64>;
+}
+
 impl Hdr10PlusMetadata {
     pub fn parse(data: &[u8]) -> Result<Hdr10PlusMetadata> {
         let mut reader = BsIoSliceReader::from_slice(data);
@@ -595,6 +612,42 @@ impl Default for Hdr10PlusMetadataEncOpts {
         Self {
             validate: true,
             with_country_code: true,
+        }
+    }
+}
+
+impl VariablePeakBrightness for Hdr10PlusMetadata {
+    fn peak_brightness_nits(&self, source: PeakBrightnessSource) -> Option<f64> {
+        match source {
+            PeakBrightnessSource::Histogram => self
+                .distribution_maxrgb
+                .iter()
+                .max_by_key(|x| x.percentile)
+                .map(|e| e.percentile as f64 / 10.0),
+            PeakBrightnessSource::Histogram99 => self
+                .distribution_maxrgb
+                .iter()
+                .last()
+                .map(|e| e.percentile as f64 / 10.0),
+            PeakBrightnessSource::MaxScl => self.maxscl.iter().max().map(|max| *max as f64 / 10.0),
+            PeakBrightnessSource::MaxSclLuminance => {
+                let [r, g, b] = self.maxscl.map(|e| e as f64);
+                let luminance = (0.2627 * r) + (0.678 * g) + (0.0593 * b);
+                Some(luminance / 10.0)
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for PeakBrightnessSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Histogram => f.write_str("Histogram maximum value"),
+            Self::Histogram99 => f.write_str("Histogram 99.98% percentile from metadata"),
+            Self::MaxScl => f.write_str("MaxSCL maximum value"),
+            Self::MaxSclLuminance => {
+                f.write_str("MaxSCL Luminance, calculated from the components")
+            }
         }
     }
 }
