@@ -35,7 +35,7 @@ Options that apply to the commands:
     hdr10plus_tool extract video.hevc -o metadata.json
     ```
     ```console
-    ffmpeg -i input.mkv -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o metadata.json -
+    ffmpeg -i input.mkv -map 0:v:0 -c copy -bsf:v hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o metadata.json -
     ```
 
     **Extract without validating**:
@@ -63,7 +63,7 @@ Options that apply to the commands:
     hdr10plus_tool remove video.hevc -o hdr10plus_removed_output.hevc
     ```
     ```console
-    ffmpeg -i input.mkv -map 0:v:0 -c copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool remove -
+    ffmpeg -i input.mkv -map 0:v:0 -c copy -bsf:v hevc_mp4toannexb -f hevc - | hdr10plus_tool remove -
     ```
 &nbsp;
 * ### **plot**
