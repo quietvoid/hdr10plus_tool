@@ -1,6 +1,4 @@
-use std::convert::TryFrom;
-
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Result};
 use bitvec_helpers::bitstream_io_writer::BitstreamIoWriter;
 use hevc::{NAL_SEI_PREFIX, USER_DATA_REGISTERED_ITU_T_35};
 use hevc_parser::{hevc, utils::add_start_code_emulation_prevention_3_byte};
@@ -15,13 +13,13 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
     };
 
     // Write NALU SEI_PREFIX header
-    let mut header_writer = BitstreamIoWriter::with_capacity(0);
+    let mut header_writer = BitstreamIoWriter::with_capacity(64);
 
     header_writer.write(false)?; // forbidden_zero_bit
 
     header_writer.write_n(&NAL_SEI_PREFIX, 6)?; // nal_type
-    header_writer.write_n(&(0_u8), 6)?; // nuh_layer_id
-    header_writer.write_n(&(1_u8), 3)?; // nuh_temporal_id_plus1
+    header_writer.write_n(&0_u8, 6)?; // nuh_layer_id
+    header_writer.write_n(&1_u8, 3)?; // nuh_temporal_id_plus1
 
     header_writer.write_n(&USER_DATA_REGISTERED_ITU_T_35, 8)?;
 
@@ -38,10 +36,7 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
 
     payload.push(0x80);
 
-    let mut data = header_writer
-        .as_slice()
-        .ok_or_else(|| anyhow!("Unaligned bytes"))?
-        .to_vec();
+    let mut data = header_writer.into_inner();
     data.append(&mut payload);
 
     add_start_code_emulation_prevention_3_byte(&mut data);

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{bail, ensure, Result};
 use bitvec_helpers::{
     bitstream_io_reader::BsIoSliceReader, bitstream_io_writer::BitstreamIoWriter,
 };
@@ -269,7 +269,7 @@ impl Hdr10PlusMetadata {
             self.validate()?;
         }
 
-        let mut writer = BitstreamIoWriter::with_capacity(64 * 8);
+        let mut writer = BitstreamIoWriter::with_capacity(64);
 
         if opts.with_country_code {
             writer.write_n(&self.itu_t_t35_country_code, 8)?;
@@ -331,12 +331,7 @@ impl Hdr10PlusMetadata {
 
         writer.byte_align()?;
 
-        let payload = writer
-            .as_slice()
-            .ok_or_else(|| anyhow!("Unaligned bytes"))?
-            .to_vec();
-
-        Ok(payload)
+        Ok(writer.into_inner())
     }
 
     #[deprecated(since = "1.2.0", note = "Replaced by encode_with_opts")]

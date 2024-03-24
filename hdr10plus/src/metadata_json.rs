@@ -199,7 +199,7 @@ pub fn json_list(list: &[&Hdr10PlusMetadata]) -> (String, Vec<Value>) {
     (profile.to_string(), metadata_json_array)
 }
 
-pub fn compute_scene_information(profile: &str, metadata_json_array: &mut Vec<Value>) {
+pub fn compute_scene_information(profile: &str, metadata_json_array: &mut [Value]) {
     let mut scene_frame_index: u64 = 0;
     let mut scene_id: u64 = 0;
 

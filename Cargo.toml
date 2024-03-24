@@ -3,25 +3,25 @@ name = "hdr10plus_tool"
 version = "1.6.0"
 authors = ["quietvoid"]
 edition = "2021"
-rust-version = "1.70.0"
+rust-version = "1.74.0"
 license = "MIT"
 
 [dependencies]
-bitvec_helpers = { version = "3.1.3", default-features = false, features = ["bitstream-io"] }
+bitvec_helpers = { version = "3.1.4", default-features = false, features = ["bitstream-io"] }
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
 hevc_parser = { version = "0.6.2", features = ["hevc_io"] }
 
-clap = { version = "4.4.11", features = ["derive", "wrap_help", "deprecated"] }
-serde_json = { version = "1.0.108", features = ["preserve_order"] }
-indicatif = "0.17.7"
-anyhow = "1.0.77"
-thiserror = "1.0.52"
+clap = { version = "4.5.3", features = ["derive", "wrap_help", "deprecated"] }
+serde_json = { version = "1.0.114", features = ["preserve_order"] }
+indicatif = "0.17.8"
+anyhow = "1.0.81"
+thiserror = "1.0.58"
 plotters = { version = "0.3.5", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "all_series"] }
 
 [dev-dependencies]
-assert_cmd = "2.0.12"
-assert_fs = "1.1.0"
-predicates = "3.0.4"
+assert_cmd = "2.0.14"
+assert_fs = "1.1.1"
+predicates = "3.1.0"
 
 [[bin]]
 name = "hdr10plus_tool"
