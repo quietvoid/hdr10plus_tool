@@ -581,6 +581,7 @@ dependencies = [
  "anyhow",
  "bitvec_helpers",
  "hevc_parser",
+ "libc",
  "serde",
  "serde_json",
 ]
