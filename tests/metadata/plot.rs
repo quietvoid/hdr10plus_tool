@@ -22,12 +22,12 @@ fn help() -> Result<()> {
 }
 
 #[test]
-fn plot_p7() -> Result<()> {
+fn plot_hdr10plus() -> Result<()> {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_json = Path::new("assets/hevc_tests/regular_metadata.json");
-    let output_file = temp.child("L1_plot.png");
+    let output_file = temp.child("plot.png");
 
     let assert = cmd
         .arg(SUBCOMMAND)

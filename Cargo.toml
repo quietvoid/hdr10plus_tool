@@ -11,12 +11,12 @@ bitvec_helpers = { version = "3.1.4", default-features = false, features = ["bit
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
 hevc_parser = { version = "0.6.2", features = ["hevc_io"] }
 
-clap = { version = "4.5.3", features = ["derive", "wrap_help", "deprecated"] }
-serde_json = { version = "1.0.114", features = ["preserve_order"] }
+clap = { version = "4.5.4", features = ["derive", "wrap_help", "deprecated"] }
+serde_json = { version = "1.0.117", features = ["preserve_order"] }
 indicatif = "0.17.8"
-anyhow = "1.0.81"
-thiserror = "1.0.58"
-plotters = { version = "0.3.5", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "all_series"] }
+anyhow = "1.0.86"
+thiserror = "1.0.61"
+plotters = { version = "0.3.6", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "all_series"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
