@@ -93,7 +93,7 @@ pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *const JsonOpaque) {
 /// If an error occurs in the writing, returns null
 #[no_mangle]
 pub unsafe extern "C" fn hdr10plus_rs_write_av1_metadata_obu_t35_complete(
-    ptr: *const JsonOpaque,
+    ptr: *mut JsonOpaque,
     frame_number: size_t,
 ) -> *const Data {
     if ptr.is_null() {
