@@ -80,7 +80,7 @@ pub unsafe extern "C" fn hdr10plus_rs_json_get_error(ptr: *const JsonOpaque) -> 
 ///
 /// Free the Hdr10PlusJsonOpaque
 #[no_mangle]
-pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *mut JsonOpaque) {
+pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *const JsonOpaque) {
     if !ptr.is_null() {
         drop(Box::from_raw(ptr));
     }
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *mut JsonOpaque) {
 /// If an error occurs in the writing, returns null
 #[no_mangle]
 pub unsafe extern "C" fn hdr10plus_rs_write_av1_metadata_obu_t35_complete(
-    ptr: *mut JsonOpaque,
+    ptr: *const JsonOpaque,
     frame_number: size_t,
 ) -> *const Data {
     if ptr.is_null() {
