@@ -80,7 +80,7 @@ pub unsafe extern "C" fn hdr10plus_rs_json_get_error(ptr: *const JsonOpaque) -> 
 ///
 /// Free the Hdr10PlusJsonOpaque
 #[no_mangle]
-pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *const JsonOpaque) {
+pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *mut JsonOpaque) {
     if !ptr.is_null() {
         drop(Box::from_raw(ptr));
     }
