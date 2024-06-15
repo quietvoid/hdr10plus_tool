@@ -32,4 +32,4 @@ jobs:
 
       - name: Clippy
         run: |
-          cargo clippy --workspace --all-features --all-targets --tests -- --deny warnings --verbose
+          cargo clippy --workspace --all-features --all-targets --tests -- --deny warnings
