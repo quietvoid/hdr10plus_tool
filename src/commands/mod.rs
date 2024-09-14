@@ -76,6 +76,14 @@ pub struct ExtractArgs {
         help = "Skip metadata reordering, workaround for misauthored HEVC files"
     )]
     skip_reorder: bool,
+
+    #[arg(
+        id = "limit",
+        long,
+        short = 'l',
+        help = "Stop processing input after N frames"
+    )]
+    pub limit: Option<u64>,
 }
 
 #[derive(Args, Debug)]

@@ -29,6 +29,7 @@ Options that apply to the commands:
     **Flags**:
     * `--skip-reorder` Skip metadata reordering after extracting.
         - [Explanation on when to use `--skip-reorder`](README.md#wrong-metadata-order-workaround).
+    * `-l`, `--limit` Number of frames to process from the input. Processing stops after N frames.
 
     **Examples**:
     ```console

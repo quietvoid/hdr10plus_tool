@@ -3,7 +3,7 @@ use hevc_parser::io::IoFormat;
 
 use super::{input_from_either, CliOptions, ExtractArgs};
 use crate::core::initialize_progress_bar;
-use crate::core::parser::Parser;
+use crate::core::parser::{Parser, ParserOptions};
 
 pub struct Extractor {}
 
@@ -14,6 +14,7 @@ impl Extractor {
             input_pos,
             output,
             skip_reorder,
+            limit,
         } = args;
         let input = input_from_either("extract", input, input_pos)?;
 
@@ -28,7 +29,14 @@ impl Extractor {
         };
 
         let pb = initialize_progress_bar(&format, &input)?;
-        let mut parser = Parser::new(input, output, options, pb, skip_reorder);
+        let mut parser = Parser::new(
+            input,
+            output,
+            options,
+            pb,
+            skip_reorder,
+            ParserOptions { limit },
+        );
 
         parser.process_input(&format)
     }

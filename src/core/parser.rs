@@ -32,6 +32,8 @@ pub struct Parser {
 
     hdr10plus_sei_list: Vec<MetadataFrame>,
     skip_reorder: bool,
+
+    parser_opts: ParserOptions,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +43,11 @@ pub struct MetadataFrame {
     pub metadata: Option<Vec<u8>>,
 }
 
+#[derive(Default)]
+pub struct ParserOptions {
+    pub limit: Option<u64>,
+}
+
 impl Parser {
     pub fn new(
         input: PathBuf,
@@ -48,6 +55,7 @@ impl Parser {
         options: CliOptions,
         progress_bar: ProgressBar,
         skip_reorder: bool,
+        parser_opts: ParserOptions,
     ) -> Self {
         Self {
             input,
@@ -56,6 +64,7 @@ impl Parser {
             progress_bar,
             hdr10plus_sei_list: Vec::new(),
             skip_reorder,
+            parser_opts,
         }
     }
 
@@ -64,6 +73,7 @@ impl Parser {
 
         let processor_opts = HevcProcessorOpts {
             parse_nals: true,
+            limit: self.parser_opts.limit,
             ..Default::default()
         };
         let mut processor = HevcProcessor::new(format.clone(), processor_opts, chunk_size);
@@ -246,6 +256,12 @@ impl IoProcessor for Parser {
         }
 
         let frames = parser.ordered_frames();
+
+        // Some NALUs may have been added without having parsed the full AU or a slice
+        if self.parser_opts.limit.is_some() {
+            self.hdr10plus_sei_list.truncate(frames.len());
+        }
+
         ensure!(self.hdr10plus_sei_list.len() == frames.len());
 
         let has_metadata_gaps = self.hdr10plus_sei_list.iter().any(|e| e.metadata.is_none());
