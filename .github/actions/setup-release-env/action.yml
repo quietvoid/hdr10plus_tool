@@ -8,7 +8,7 @@ runs:
     - name: Get the package versions
       shell: bash
       run: |
-        RELEASE_PKG_VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[0].version')
+        RELEASE_PKG_VERSION=$(cargo metadata --manifest-path Cargo.toml --format-version 1 --no-deps | jq -r '.packages[] | select(.name=="hdr10plus_tool") | .version')
 
         echo "RELEASE_PKG_VERSION=${RELEASE_PKG_VERSION}" >> $GITHUB_ENV
         echo "ARCHIVE_PREFIX=${{ env.RELEASE_BIN }}-${RELEASE_PKG_VERSION}" >> $GITHUB_ENV
