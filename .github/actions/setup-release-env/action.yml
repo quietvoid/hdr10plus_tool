@@ -1,0 +1,19 @@
+name: Setup release env
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Get the package versions
+      shell: bash
+      run: |
+        RELEASE_PKG_VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[0].version')
+
+        echo "RELEASE_PKG_VERSION=${RELEASE_PKG_VERSION}" >> $GITHUB_ENV
+        echo "ARCHIVE_PREFIX=${{ env.RELEASE_BIN }}-${RELEASE_PKG_VERSION}" >> $GITHUB_ENV
+
+    - name: Create artifacts directory
+      shell: bash
+      run: |
+        mkdir ${{ env.RELEASE_DIR }}
