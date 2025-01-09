@@ -33,7 +33,7 @@ pub struct JsonInfo {
     pub version: String,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Hdr10PlusJsonMetadata {
     pub bezier_curve_data: Option<BezierCurveData>,
@@ -59,7 +59,7 @@ pub struct ToolInfo {
     pub version: String,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct BezierCurveData {
     pub anchors: Vec<u16>,
@@ -67,7 +67,7 @@ pub struct BezierCurveData {
     pub knee_point_y: u16,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct LuminanceParameters {
     #[serde(rename = "AverageRGB")]
@@ -77,7 +77,7 @@ pub struct LuminanceParameters {
     pub max_scl: Vec<u32>,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct LuminanceDistributions {
     pub distribution_index: Vec<u8>,

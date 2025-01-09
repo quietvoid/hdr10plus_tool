@@ -1,6 +1,6 @@
 [package]
 name = "hdr10plus_tool"
-version = "1.6.1"
+version = "1.7.0"
 authors = ["quietvoid"]
 edition = "2021"
 rust-version = "1.79.0"
@@ -17,6 +17,7 @@ indicatif = "0.17.8"
 anyhow = "1.0.88"
 thiserror = "1.0.63"
 plotters = { version = "0.3.7", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "all_series"] }
+serde = { version = "1.0.215", features = ["derive"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
