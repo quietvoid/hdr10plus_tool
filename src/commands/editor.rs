@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::fs::File;
 use std::path::Path;
 use std::io::{stdout, BufWriter, Write};
@@ -7,7 +6,8 @@ use std::path::PathBuf;
 use anyhow::{bail, Result, ensure};
 use serde::{Deserialize, Serialize};
 
-use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
+use hdr10plus::metadata_json::{generate_json, MetadataJsonRoot};
+use hdr10plus::metadata::Hdr10PlusMetadata;
 
 use crate::commands::EditorArgs;
 
@@ -18,9 +18,9 @@ use super::input_from_either;
 
 pub struct Editor {
     edits_json: PathBuf,
-    json_out: PathBuf,
+    output: PathBuf,
 
-    metadata_root: MetadataJsonRoot,
+    metadata_list: Vec<Hdr10PlusMetadata>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -31,9 +31,6 @@ pub struct EditConfig {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     duplicate: Option<Vec<DuplicateMetadata>>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    scene_cuts: Option<Vec<usize>>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -67,31 +64,38 @@ impl Editor{
         };
         
         println!("Parsing JSON file...");
-        let metadata_root = MetadataJsonRoot::from_file(&input)?;
+        let metadata_json_root = MetadataJsonRoot::from_file(&input)?;
+        let metadata_list: Vec<Hdr10PlusMetadata> = metadata_json_root
+            .scene_info
+            .iter()
+            .map(Hdr10PlusMetadata::try_from)
+            .filter_map(Result::ok)
+            .collect();
+        ensure!(metadata_json_root.scene_info.len() == metadata_list.len());
 
         let mut editor = Editor {
             edits_json,
-            json_out: out_path,
+            output: out_path,
 
-            metadata_root,
+            metadata_list,
         };
 
         let config: EditConfig = EditConfig::from_path(&editor.edits_json)?;
 
         println!("EditConfig {}", serde_json::to_string_pretty(&config)?);
 
-        config.execute(&mut editor.metadata_root)?;
+        config.execute(&mut editor.metadata_list)?;
 
-        let save_file = File::create(editor.json_out).expect("Can't create file");
+        let save_file = File::create(editor.output).expect("Can't create file");
         let mut writer = BufWriter::with_capacity(10_000_000, save_file);
 
-        print!("Generating and writing metadata to new JSON file... ");
+        print!("Generating and writing metadata to JSON file... ");
         stdout().flush().ok();
 
-        editor.metadata_root.tool_info.tool = TOOL_NAME.to_string();
-        editor.metadata_root.tool_info.version = TOOL_VERSION.to_string();
+        let list: Vec<&Hdr10PlusMetadata> = editor.metadata_list.iter().collect();
+        let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
 
-        writeln!(writer, "{}", serde_json::to_string_pretty(&editor.metadata_root)?)?;
+        writeln!(writer, "{}", serde_json::to_string_pretty(&final_json)?)?;
 
         println!("Done.");
 
@@ -116,58 +120,15 @@ impl EditConfig {
         Ok(config)
     }
 
-    fn execute(self, metadata: &mut MetadataJsonRoot) -> Result<()> {
-        let mut do_renumber: bool = false;
-
+    fn execute(self, metadata: &mut Vec<Hdr10PlusMetadata>) -> Result<()> {
         // Drop metadata frames
         if let Some(ranges) = &self.remove {
-            self.remove_frames(ranges, &mut metadata.scene_info)?;
-
-            do_renumber = true;
+            self.remove_frames(ranges, metadata)?;
         }
 
 
         if let Some(to_duplicate) = &self.duplicate {
-            self.duplicate_metadata(to_duplicate, &mut metadata.scene_info)?;
-
-            do_renumber = true;
-        }
-
-        let scene_cuts: HashSet<usize> = self.scene_cuts.unwrap_or(Vec::new()).into_iter().collect();
-
-        if !scene_cuts.is_empty() || do_renumber {
-            let mut new_scene_first_frame_index: Vec<usize> = Vec::new();
-            let mut new_scene_frame_numbers: Vec<usize> = Vec::new();
-
-            let mut curr_scene_id: usize = metadata.scene_info[0].scene_id;
-            let mut new_scene_id: usize = 0;
-            let mut new_scene_frame_index: usize = 0;
-
-            new_scene_first_frame_index.push(0);
-
-            for idx in 0..metadata.scene_info.len(){
-                metadata.scene_info[idx].sequence_frame_index = idx;
-
-                if curr_scene_id != metadata.scene_info[idx].scene_id || scene_cuts.contains(&idx){
-                    if curr_scene_id != metadata.scene_info[idx].scene_id {
-                        curr_scene_id = metadata.scene_info[idx].scene_id;
-                    }
-
-                    new_scene_first_frame_index.push(idx);
-                    new_scene_frame_numbers.push(new_scene_frame_index);
-
-                    new_scene_id += 1;
-                    new_scene_frame_index = 0;
-                }
-                metadata.scene_info[idx].scene_id = new_scene_id;
-                metadata.scene_info[idx].scene_frame_index = new_scene_frame_index;
-                new_scene_frame_index += 1;
-            }
-            new_scene_frame_numbers.push(new_scene_frame_index);
-
-
-            metadata.scene_info_summary.scene_first_frame_index = new_scene_first_frame_index;
-            metadata.scene_info_summary.scene_frame_numbers = new_scene_frame_numbers;
+            self.duplicate_metadata(to_duplicate, metadata)?;
         }
 
         Ok(())
@@ -197,7 +158,7 @@ impl EditConfig {
         }
     }
 
-    fn remove_frames(&self, ranges: &[String], metadata: &mut Vec<Hdr10PlusJsonMetadata>) -> Result<()> {
+    fn remove_frames(&self, ranges: &[String], metadata: &mut Vec<Hdr10PlusMetadata>) -> Result<()> {
         let mut amount = 0;
 
         for range in ranges {
@@ -230,7 +191,7 @@ impl EditConfig {
     fn duplicate_metadata(
         &self,
         to_duplicate: &[DuplicateMetadata],
-        metadata: &mut Vec<Hdr10PlusJsonMetadata>,
+        metadata: &mut Vec<Hdr10PlusMetadata>,
     ) -> Result<()> {
         println!("Duplicating metadata. Initial metadata len {}", metadata.len());
 
@@ -241,9 +202,7 @@ impl EditConfig {
                 meta
             );
 
-            let mut source = metadata[meta.source].clone();
-            //Assume that the copied metadata are in the same scene cut of the at the frame at offset position 
-            source.scene_id = metadata[meta.offset].scene_id;
+            let source = metadata[meta.source].clone();
             metadata.splice(
                 meta.offset..meta.offset,
                 std::iter::repeat(source).take(meta.length),

@@ -104,11 +104,6 @@ Options that apply to the commands:
                 // Number of frames to duplicate
                 "length": int
             }
-        ],
-        
-        // Set the scene cut for specific frame index
-        "scene_cuts": [
-		    0, 1000, etc
         ]
     }
     ```
