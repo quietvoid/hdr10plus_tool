@@ -82,7 +82,7 @@ Options that apply to the commands:
     ```
 &nbsp;
 * ### **editor**
-    Allow adding and removing frames and scenecut
+    Allow adding and removing frames
     
     **edits.json**
     The editor expects a JSON config like the example below:
