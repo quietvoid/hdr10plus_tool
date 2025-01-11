@@ -24,7 +24,7 @@ pub struct Editor {
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
-#[serde(deny_unknown_fields)]
+#[serde()]
 pub struct EditConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     remove: Option<Vec<String>>,
