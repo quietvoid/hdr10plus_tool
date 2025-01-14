@@ -6,11 +6,11 @@ use hdr10plus::metadata::PeakBrightnessSource;
 
 use crate::CliOptions;
 
+pub mod editor;
 pub mod extract;
 pub mod inject;
 pub mod plot;
 pub mod remove;
-pub mod editor;
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArgPeakBrightnessSource {
@@ -202,7 +202,6 @@ pub struct PlotArgs {
     )]
     pub peak_source: ArgPeakBrightnessSource,
 }
-
 
 #[derive(Args, Debug)]
 pub struct EditorArgs {

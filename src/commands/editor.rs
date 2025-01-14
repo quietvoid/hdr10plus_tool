@@ -1,13 +1,12 @@
 use std::fs::File;
-use std::path::Path;
 use std::io::{stdout, BufWriter, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result, ensure};
+use anyhow::{bail, ensure, Result};
 use serde::{Deserialize, Serialize};
 
-use hdr10plus::metadata_json::{generate_json, MetadataJsonRoot};
 use hdr10plus::metadata::Hdr10PlusMetadata;
+use hdr10plus::metadata_json::{generate_json, MetadataJsonRoot};
 
 use crate::commands::EditorArgs;
 
@@ -41,7 +40,7 @@ pub struct DuplicateMetadata {
     length: usize,
 }
 
-impl Editor{
+impl Editor {
     pub fn edit(args: EditorArgs) -> Result<()> {
         let EditorArgs {
             input,
@@ -50,9 +49,8 @@ impl Editor{
             json_out,
         } = args;
 
-
         let input = input_from_either("editor", input, input_pos)?;
-        
+
         let out_path = if let Some(out_path) = json_out {
             out_path
         } else {
@@ -62,7 +60,7 @@ impl Editor{
                 "_modified.json"
             ))
         };
-        
+
         println!("Parsing JSON file...");
         let metadata_json_root = MetadataJsonRoot::from_file(&input)?;
         let metadata_list: Vec<Hdr10PlusMetadata> = metadata_json_root
@@ -100,18 +98,16 @@ impl Editor{
         println!("Done.");
 
         writer.flush()?;
-        
+
         Ok(())
     }
 }
-
-
 
 impl EditConfig {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let json_file = File::open(path)?;
         let mut config: EditConfig = serde_json::from_reader(&json_file)?;
-        
+
         if let Some(to_duplicate) = config.duplicate.as_mut() {
             to_duplicate.sort_by_key(|meta| meta.offset);
             to_duplicate.reverse();
@@ -125,7 +121,6 @@ impl EditConfig {
         if let Some(ranges) = &self.remove {
             self.remove_frames(ranges, metadata)?;
         }
-
 
         if let Some(to_duplicate) = &self.duplicate {
             self.duplicate_metadata(to_duplicate, metadata)?;
@@ -158,7 +153,11 @@ impl EditConfig {
         }
     }
 
-    fn remove_frames(&self, ranges: &[String], metadata: &mut Vec<Hdr10PlusMetadata>) -> Result<()> {
+    fn remove_frames(
+        &self,
+        ranges: &[String],
+        metadata: &mut Vec<Hdr10PlusMetadata>,
+    ) -> Result<()> {
         let mut amount = 0;
 
         for range in ranges {
@@ -167,7 +166,7 @@ impl EditConfig {
                 ensure!(end < metadata.len(), "invalid end range {}", end);
 
                 amount += end - start + 1;
-                for _ in 0..amount{
+                for _ in 0..amount {
                     metadata.remove(start);
                 }
             } else if let Ok(index) = range.parse::<usize>() {
@@ -193,7 +192,10 @@ impl EditConfig {
         to_duplicate: &[DuplicateMetadata],
         metadata: &mut Vec<Hdr10PlusMetadata>,
     ) -> Result<()> {
-        println!("Duplicating metadata. Initial metadata len {}", metadata.len());
+        println!(
+            "Duplicating metadata. Initial metadata len {}",
+            metadata.len()
+        );
 
         for meta in to_duplicate {
             ensure!(

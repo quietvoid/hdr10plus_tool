@@ -5,11 +5,11 @@ mod commands;
 mod core;
 mod utils;
 
+use commands::editor::Editor;
 use commands::extract::Extractor;
 use commands::inject::Injector;
 use commands::plot::Plotter;
 use commands::remove::Remover;
-use commands::editor::Editor;
 use commands::Command;
 
 use crate::core::ParserError;
