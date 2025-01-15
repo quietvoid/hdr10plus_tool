@@ -6,6 +6,7 @@ use hdr10plus::metadata::PeakBrightnessSource;
 
 use crate::CliOptions;
 
+pub mod editor;
 pub mod extract;
 pub mod inject;
 pub mod plot;
@@ -39,6 +40,9 @@ pub enum Command {
 
     #[command(about = "Plot the HDR10+ dynamic brightness metadata")]
     Plot(PlotArgs),
+
+    #[command(about = "Edit the HDR10+ metadata")]
+    Editor(EditorArgs),
 }
 
 #[derive(Args, Debug)]
@@ -197,6 +201,46 @@ pub struct PlotArgs {
         default_value = "histogram"
     )]
     pub peak_source: ArgPeakBrightnessSource,
+}
+
+#[derive(Args, Debug)]
+pub struct EditorArgs {
+    #[arg(
+        id = "input",
+        help = "Sets the input JSON file to use",
+        long,
+        short = 'i',
+        conflicts_with = "input_pos",
+        required_unless_present = "input_pos",
+        value_hint = ValueHint::FilePath,
+    )]
+    pub input: Option<PathBuf>,
+
+    #[arg(
+        id = "input_pos",
+        help = "Sets the input JSON file to use (positional)",
+        conflicts_with = "input",
+        required_unless_present = "input",
+        value_hint = ValueHint::FilePath
+    )]
+    pub input_pos: Option<PathBuf>,
+
+    #[arg(
+        id = "json",
+        long,
+        short = 'j',
+        help = "Sets the edit JSON file to use",
+        value_hint = ValueHint::FilePath
+    )]
+    pub edits_json: PathBuf,
+
+    #[arg(
+        long,
+        short = 'o',
+        help = "Modified JSON output file location",
+        value_hint = ValueHint::FilePath
+    )]
+    pub json_out: Option<PathBuf>,
 }
 
 pub fn input_from_either(cmd: &str, in1: Option<PathBuf>, in2: Option<PathBuf>) -> Result<PathBuf> {

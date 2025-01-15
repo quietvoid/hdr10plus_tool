@@ -5,6 +5,7 @@ mod commands;
 mod core;
 mod utils;
 
+use commands::editor::Editor;
 use commands::extract::Extractor;
 use commands::inject::Injector;
 use commands::plot::Plotter;
@@ -45,6 +46,7 @@ fn main() -> Result<()> {
         Command::Inject(args) => Injector::inject_json(args, cli_options),
         Command::Remove(args) => Remover::remove_sei(args, cli_options),
         Command::Plot(args) => Plotter::plot(args),
+        Command::Editor(args) => Editor::edit(args),
     };
 
     let actually_errored = if let Err(e) = &res {

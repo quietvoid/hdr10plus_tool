@@ -81,6 +81,38 @@ Options that apply to the commands:
     hdr10plus_tool plot metadata.json -t "HDR10+ plot" -o hdr10plus_plot.png
     ```
 &nbsp;
+* ### **editor**
+    Allow adding and removing frames
+    
+    **edits.json**
+    The editor expects a JSON config like the example below:
+    ```json5
+    {
+        // List of frames or frame ranges to remove (inclusive)
+        // Frames are removed before the duplicate passes
+        "remove": [
+            "0-39"
+        ],
+
+        // List of duplicate operations
+        "duplicate": [
+            {
+                // Frame to use as metadata source
+                "source": int,
+                // Index at which the duplicated frames are added (inclusive)
+                "offset": int,
+                // Number of frames to duplicate
+                "length": int
+            }
+        ]
+    }
+    ```
+    
+    **Example**
+    ```console
+    hdr10plus_tool editor metadata.json -j edits.json -o metadata_modified.json
+    ```
+&nbsp;
 
 ### Wrong metadata order workaround
 The `skip-reorder` option should only be used as a workaround for misauthored HEVC files.  
