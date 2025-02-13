@@ -1,1 +1,2 @@
+mod editor;
 mod plot;
