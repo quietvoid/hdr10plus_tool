@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use hevc_parser::io::IoFormat;
 
 use super::{input_from_either, CliOptions, ExtractArgs};
@@ -21,7 +21,7 @@ impl Extractor {
         let format = hevc_parser::io::format_from_path(&input)?;
 
         if format == IoFormat::Matroska {
-            bail!("Extractor: Matroska format unsupported");
+            println!("Extractor: Matroska input is experimental!");
         }
 
         if !options.verify && output.is_none() {

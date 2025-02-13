@@ -21,10 +21,15 @@ Options that apply to the commands:
 
 ## Commands
 * ### **extract**
-    Extracts the HDR10+ metadata from HEVC SEI messages to a JSON file.  
+    Extracts the HDR10+ metadata from a HEVC file to a JSON file.  
     Also calculates the scene information for compatibility with Samsung tools.  
 
     If no output is specified, the file is only parsed partially to verify presence of metadata.
+
+    Input file:
+    - HEVC bitstream
+    - Matroska (experimental): MKV file containing a HEVC video track.
+
 
     **Flags**:
     * `--skip-reorder` Skip metadata reordering after extracting.
@@ -34,6 +39,9 @@ Options that apply to the commands:
     **Examples**:
     ```console
     hdr10plus_tool extract video.hevc -o metadata.json
+
+    # Experimental
+    hdr10plus_tool extract video.mkv -o metadata.json
     ```
     ```console
     ffmpeg -i input.mkv -map 0:v:0 -c copy -bsf:v hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o metadata.json -

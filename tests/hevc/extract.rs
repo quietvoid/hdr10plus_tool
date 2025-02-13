@@ -1989,3 +1989,35 @@ fn dts_injected() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn regular() -> Result<()> {
+    let input_file = Path::new("assets/hevc_tests/regular.hevc");
+    let temp = assert_fs::TempDir::new()?;
+
+    let output_json = temp.child("metadata.json");
+    let expected_json = Path::new("assets/hevc_tests/regular_metadata.json");
+
+    assert_cmd_output(input_file, output_json.as_ref(), true)?;
+    output_json
+        .assert(predicate::path::is_file())
+        .assert(predicate::path::eq_file(expected_json));
+
+    Ok(())
+}
+
+#[test]
+fn regular_mkv() -> Result<()> {
+    let input_file = Path::new("assets/hevc_tests/regular.mkv");
+    let temp = assert_fs::TempDir::new()?;
+
+    let output_json = temp.child("metadata.json");
+    let expected_json = Path::new("assets/hevc_tests/regular_metadata.json");
+
+    assert_cmd_output(input_file, output_json.as_ref(), true)?;
+    output_json
+        .assert(predicate::path::is_file())
+        .assert(predicate::path::eq_file(expected_json));
+
+    Ok(())
+}
