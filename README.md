@@ -7,7 +7,7 @@ Previously named `hdr10plus_parser`, now it's more than just a parser.
 ## **Building**
 ### **Toolchain**
 
-The minimum Rust version to build **`hdr10plus_tool`** is 1.79.0.
+The minimum Rust version to build **`hdr10plus_tool`** is 1.85.0.
 
 ### **Dependencies**
 On Linux systems, [fontconfig](https://github.com/yeslogic/fontconfig-rs#dependencies) is required.  

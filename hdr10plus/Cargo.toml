@@ -2,8 +2,8 @@
 name = "hdr10plus"
 version = "2.1.3"
 authors = ["quietvoid"]
-edition = "2021"
-rust-version = "1.79.0"
+edition = "2024"
+rust-version = "1.85.0"
 license = "MIT"
 description = "HDR10+ metadata parsing and writing"
 repository = "https://github.com/quietvoid/hdr10plus_tool/tree/master/hdr10plus"

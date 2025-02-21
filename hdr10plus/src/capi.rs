@@ -20,7 +20,7 @@ use super::c_structs::*;
 ///
 /// Parse a HDR10+ JSON file from file path.
 /// Adds an error if the parsing fails.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hdr10plus_rs_parse_json(path: *const c_char) -> *mut JsonOpaque {
     if path.is_null() {
         return null_mut();
@@ -32,7 +32,7 @@ pub unsafe extern "C" fn hdr10plus_rs_parse_json(path: *const c_char) -> *mut Js
     };
     let mut error = None;
 
-    if let Ok(str) = CStr::from_ptr(path).to_str() {
+    if let Ok(str) = unsafe { CStr::from_ptr(path) }.to_str() {
         let path = PathBuf::from(str);
         match MetadataJsonRoot::from_file(path) {
             Ok(metadata) => opaque.metadata_root = Some(metadata),
@@ -61,13 +61,13 @@ pub unsafe extern "C" fn hdr10plus_rs_parse_json(path: *const c_char) -> *mut Js
 ///
 /// On invalid parsing, an error is added.
 /// The user should manually verify if there is an error, as the parsing does not return an error code.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hdr10plus_rs_json_get_error(ptr: *const JsonOpaque) -> *const c_char {
     if ptr.is_null() {
         return null();
     }
 
-    let opaque = &*ptr;
+    let opaque = unsafe { &*ptr };
 
     match &opaque.error {
         Some(s) => s.as_ptr(),
@@ -79,10 +79,10 @@ pub unsafe extern "C" fn hdr10plus_rs_json_get_error(ptr: *const JsonOpaque) -> 
 /// The pointer to the opaque struct must be valid.
 ///
 /// Free the Hdr10PlusJsonOpaque
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *mut JsonOpaque) {
     if !ptr.is_null() {
-        drop(Box::from_raw(ptr));
+        drop(unsafe { Box::from_raw(ptr) });
     }
 }
 
@@ -91,7 +91,7 @@ pub unsafe extern "C" fn hdr10plus_rs_json_free(ptr: *mut JsonOpaque) {
 ///
 /// Writes the encoded HDR10+ payload as a byte buffer, including country code
 /// If an error occurs in the writing, returns null
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hdr10plus_rs_write_av1_metadata_obu_t35_complete(
     ptr: *mut JsonOpaque,
     frame_number: size_t,
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn hdr10plus_rs_write_av1_metadata_obu_t35_complete(
         return null();
     }
 
-    let opaque = &mut *ptr;
+    let opaque = unsafe { &mut *ptr };
     let frame_metadata = opaque
         .metadata_root
         .as_ref()
@@ -132,10 +132,12 @@ pub unsafe extern "C" fn hdr10plus_rs_write_av1_metadata_obu_t35_complete(
 /// The data pointer should exist, and be allocated by Rust.
 ///
 /// Free a Data buffer
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn hdr10plus_rs_data_free(data: *const Data) {
     if !data.is_null() {
-        let data = Box::from_raw(data as *mut Data);
-        data.free();
+        unsafe {
+            let data = Box::from_raw(data as *mut Data);
+            data.free();
+        }
     }
 }

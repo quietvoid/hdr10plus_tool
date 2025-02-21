@@ -28,7 +28,9 @@ impl Data {
     /// # Safety
     /// The pointers should all be valid.
     pub unsafe fn free(&self) {
-        Vec::from_raw_parts(self.data as *mut u8, self.len, self.len);
+        unsafe {
+            Vec::from_raw_parts(self.data as *mut u8, self.len, self.len);
+        }
     }
 }
 

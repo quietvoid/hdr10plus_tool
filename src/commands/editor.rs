@@ -1,12 +1,12 @@
 use std::fs::File;
-use std::io::{stdout, BufWriter, Write};
+use std::io::{BufWriter, Write, stdout};
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 use hdr10plus::metadata::Hdr10PlusMetadata;
-use hdr10plus::metadata_json::{generate_json, MetadataJsonRoot};
+use hdr10plus::metadata_json::{MetadataJsonRoot, generate_json};
 
 use crate::commands::EditorArgs;
 

@@ -5,12 +5,12 @@ mod commands;
 mod core;
 mod utils;
 
+use commands::Command;
 use commands::editor::Editor;
 use commands::extract::Extractor;
 use commands::inject::Injector;
 use commands::plot::Plotter;
 use commands::remove::Remover;
-use commands::Command;
 
 use crate::core::ParserError;
 
@@ -62,9 +62,5 @@ fn main() -> Result<()> {
         false
     };
 
-    if actually_errored {
-        res
-    } else {
-        Ok(())
-    }
+    if actually_errored { res } else { Ok(()) }
 }

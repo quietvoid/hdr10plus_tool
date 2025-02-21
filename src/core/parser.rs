@@ -1,16 +1,16 @@
 use std::fs::File;
-use std::io::{stdout, BufWriter, Write};
+use std::io::{BufWriter, Write, stdout};
 use std::path::PathBuf;
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 use hevc_parser::utils::{
     add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
 };
 use indicatif::ProgressBar;
 
-use hevc_parser::hevc::{Frame, NALUnit, NAL_SEI_PREFIX};
-use hevc_parser::io::{processor, IoFormat, IoProcessor};
 use hevc_parser::HevcParser;
+use hevc_parser::hevc::{Frame, NAL_SEI_PREFIX, NALUnit};
+use hevc_parser::io::{IoFormat, IoProcessor, processor};
 use processor::{HevcProcessor, HevcProcessorOpts};
 
 use hdr10plus::metadata::Hdr10PlusMetadata;
@@ -18,7 +18,7 @@ use hdr10plus::metadata_json::generate_json;
 
 use crate::CliOptions;
 
-use super::{st2094_40_sei_msg, ParserError};
+use super::{ParserError, st2094_40_sei_msg};
 
 pub const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");

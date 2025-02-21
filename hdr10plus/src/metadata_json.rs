@@ -1,8 +1,8 @@
 use std::{convert::TryFrom, fs::File, io::Read, path::Path};
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::metadata::{
     BezierCurve, DistributionMaxRgb, Hdr10PlusMetadata, PeakBrightnessSource,

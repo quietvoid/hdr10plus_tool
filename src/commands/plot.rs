@@ -13,11 +13,11 @@ use plotters::prelude::{
     AreaSeries, BitMapBackend, Cartesian2d, ChartBuilder, ChartContext, IntoDrawingArea,
     PathElement, SeriesLabelPosition, WHITE,
 };
-use plotters::style::{Color, IntoTextStyle, RGBColor, ShapeStyle, BLACK};
+use plotters::style::{BLACK, Color, IntoTextStyle, RGBColor, ShapeStyle};
 
 use crate::utils::{nits_to_pq, pq_to_nits};
 
-use super::{input_from_either, PlotArgs};
+use super::{PlotArgs, input_from_either};
 
 #[cfg(not(feature = "system-font"))]
 const NOTO_SANS_REGULAR: &[u8] = include_bytes!(concat!(

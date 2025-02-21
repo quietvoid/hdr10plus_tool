@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 use bitvec_helpers::{
     bitstream_io_reader::BsIoSliceReader, bitstream_io_writer::BitstreamIoWriter,
 };
@@ -205,11 +205,18 @@ impl Hdr10PlusMetadata {
         }
 
         // The value of targeted_system_display_maximum_luminance shall be in the range of 0 to 10000, inclusive
-        ensure!(self.targeted_system_display_maximum_luminance <= 10000, "Invalid targeted_system_display_maximum_luminance, should be at most 10 0000. Actual: {}", self.targeted_system_display_maximum_luminance);
+        ensure!(
+            self.targeted_system_display_maximum_luminance <= 10000,
+            "Invalid targeted_system_display_maximum_luminance, should be at most 10 0000. Actual: {}",
+            self.targeted_system_display_maximum_luminance
+        );
 
         // Profile B needs Bezier curve information and a non zero target display (for OOTF)
         if self.tone_mapping_flag {
-            ensure!(self.targeted_system_display_maximum_luminance != 0, "Invalid targeted_system_display_maximum_luminance for profile B, must not be zero.");
+            ensure!(
+                self.targeted_system_display_maximum_luminance != 0,
+                "Invalid targeted_system_display_maximum_luminance for profile B, must not be zero."
+            );
         } else {
             ensure!(
                 self.targeted_system_display_maximum_luminance == 0,

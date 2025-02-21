@@ -1699,7 +1699,9 @@ fn sample58() {
     );
     assert_eq!(
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
-        vec![100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000]
+        vec![
+            100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000
+        ]
     );
 
     assert!(metadata.bezier_curve.is_some());
@@ -1729,7 +1731,9 @@ fn sample59() {
     );
     assert_eq!(
         DistributionMaxRgb::distribution_values(&metadata.distribution_maxrgb),
-        vec![100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000]
+        vec![
+            100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000
+        ]
     );
 
     assert!(metadata.bezier_curve.is_some());

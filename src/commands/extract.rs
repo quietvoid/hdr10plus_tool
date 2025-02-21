@@ -1,7 +1,7 @@
 use anyhow::Result;
 use hevc_parser::io::IoFormat;
 
-use super::{input_from_either, CliOptions, ExtractArgs};
+use super::{CliOptions, ExtractArgs, input_from_either};
 use crate::core::initialize_progress_bar;
 use crate::core::parser::{Parser, ParserOptions};
 

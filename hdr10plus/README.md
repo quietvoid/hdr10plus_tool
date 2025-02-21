@@ -6,4 +6,4 @@
 ## **Building**
 ### **Toolchain**
 
-The minimum Rust version to use the **`hdr10plus`** crate is 1.79.0.
+The minimum Rust version to use the **`hdr10plus`** crate is 1.85.0.

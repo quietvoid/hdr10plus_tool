@@ -1,15 +1,15 @@
 use std::fs::File;
-use std::io::{stdout, BufReader, BufWriter, Write};
+use std::io::{BufReader, BufWriter, Write, stdout};
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use hevc_parser::utils::{
     add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
 };
 use indicatif::ProgressBar;
 
-use hevc_parser::io::{processor, FrameBuffer, IoFormat, IoProcessor, NalBuffer};
-use hevc_parser::{hevc::*, HevcParser, NALUStartCode};
+use hevc_parser::io::{FrameBuffer, IoFormat, IoProcessor, NalBuffer, processor};
+use hevc_parser::{HevcParser, NALUStartCode, hevc::*};
 use processor::{HevcProcessor, HevcProcessorOpts};
 
 use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
@@ -17,7 +17,7 @@ use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
 use crate::commands::InjectArgs;
 use crate::core::{initialize_progress_bar, st2094_40_sei_msg};
 
-use super::{input_from_either, CliOptions};
+use super::{CliOptions, input_from_either};
 
 pub struct Injector {
     input: PathBuf,

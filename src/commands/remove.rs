@@ -2,15 +2,15 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
-use hevc_parser::hevc::{NALUnit, NAL_SEI_PREFIX};
-use hevc_parser::io::processor::{HevcProcessor, HevcProcessorOpts};
+use anyhow::{Result, bail};
 use hevc_parser::HevcParser;
+use hevc_parser::hevc::{NAL_SEI_PREFIX, NALUnit};
+use hevc_parser::io::processor::{HevcProcessor, HevcProcessorOpts};
 use indicatif::ProgressBar;
 
 use hevc_parser::io::{IoFormat, IoProcessor};
 
-use super::{input_from_either, CliOptions, RemoveArgs};
+use super::{CliOptions, RemoveArgs, input_from_either};
 use crate::core::{initialize_progress_bar, prefix_sei_removed_hdr10plus_nalu};
 
 pub struct Remover {
