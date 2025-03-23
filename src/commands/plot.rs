@@ -54,6 +54,8 @@ impl Plotter {
             output,
             title,
             peak_source,
+            start: start_arg,
+            end: end_arg,
         } = args;
 
         let output = output.unwrap_or(PathBuf::from("hdr10plus_plot.png"));
@@ -67,7 +69,12 @@ impl Plotter {
 
         println!("Parsing JSON file...");
         let metadata_root = MetadataJsonRoot::from_file(&plotter.input)?;
-        let frames = &metadata_root.scene_info;
+        let frames_orig = metadata_root.scene_info;
+
+        // inclusive range, end must be last frame index
+        let start = start_arg.unwrap_or(0);
+        let end = end_arg.unwrap_or(frames_orig.len() - 1);
+        let frames = &frames_orig[start..=end];
 
         let x_spec = 0..frames.len();
 

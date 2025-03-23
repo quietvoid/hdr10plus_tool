@@ -83,6 +83,8 @@ Options that apply to the commands:
     - `-t`, `--title` The title to set at the top of the plot
     - `-p`, `--peak-source` How to extract the peak brightness for the metadata [default: `histogram`]      
         Possible values: `histogram`, `histogram99`, `max-scl`, `max-scl-luminance`
+    - `-s`, `--start` Set frame range start
+    - `-e`, `--end` Set frame range end (inclusive)
 
     **Example**:
     ```console

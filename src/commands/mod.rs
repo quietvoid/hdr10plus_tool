@@ -201,6 +201,12 @@ pub struct PlotArgs {
         default_value = "histogram"
     )]
     pub peak_source: ArgPeakBrightnessSource,
+
+    #[arg(long, short = 's', help = "Set frame range start")]
+    pub start: Option<usize>,
+
+    #[arg(long, short = 'e', help = "Set frame range end (inclusive)")]
+    pub end: Option<usize>,
 }
 
 #[derive(Args, Debug)]
