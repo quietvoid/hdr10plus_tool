@@ -117,12 +117,12 @@ impl Hdr10PlusMetadata {
         let mut reader = BsIoSliceReader::from_slice(data);
 
         let mut meta = Hdr10PlusMetadata {
-            itu_t_t35_country_code: reader.get_n(8)?,
-            itu_t_t35_terminal_provider_code: reader.get_n(16)?,
-            itu_t_t35_terminal_provider_oriented_code: reader.get_n(16)?,
-            application_identifier: reader.get_n(8)?,
-            application_version: reader.get_n(8)?,
-            num_windows: reader.get_n(2)?,
+            itu_t_t35_country_code: reader.read::<8, u8>()?,
+            itu_t_t35_terminal_provider_code: reader.read::<16, u16>()?,
+            itu_t_t35_terminal_provider_oriented_code: reader.read::<16, u16>()?,
+            application_identifier: reader.read::<8, u8>()?,
+            application_version: reader.read::<8, u8>()?,
+            num_windows: reader.read::<2, u8>()?,
             ..Default::default()
         };
 
@@ -137,9 +137,9 @@ impl Hdr10PlusMetadata {
             meta.processing_windows = Some(processing_windows);
         }
 
-        meta.targeted_system_display_maximum_luminance = reader.get_n(27)?;
+        meta.targeted_system_display_maximum_luminance = reader.read::<27, u32>()?;
 
-        meta.targeted_system_display_actual_peak_luminance_flag = reader.get()?;
+        meta.targeted_system_display_actual_peak_luminance_flag = reader.read_bit()?;
         if meta.targeted_system_display_actual_peak_luminance_flag {
             let atsd = ActualTargetedSystemDisplay::parse(&mut reader)?;
             meta.actual_targeted_system_display = Some(atsd);
@@ -147,28 +147,28 @@ impl Hdr10PlusMetadata {
 
         for _ in 0..meta.num_windows {
             for i in 0..3 {
-                meta.maxscl[i] = reader.get_n(17)?;
+                meta.maxscl[i] = reader.read::<17, u32>()?;
             }
 
-            meta.average_maxrgb = reader.get_n(17)?;
+            meta.average_maxrgb = reader.read::<17, u32>()?;
 
-            meta.num_distribution_maxrgb_percentiles = reader.get_n(4)?;
+            meta.num_distribution_maxrgb_percentiles = reader.read::<4, u8>()?;
             for _ in 0..meta.num_distribution_maxrgb_percentiles {
                 let dmrgb = DistributionMaxRgb::parse(&mut reader)?;
                 meta.distribution_maxrgb.push(dmrgb);
             }
 
-            meta.fraction_bright_pixels = reader.get_n(10)?;
+            meta.fraction_bright_pixels = reader.read::<10, u16>()?;
         }
 
-        meta.mastering_display_actual_peak_luminance_flag = reader.get()?;
+        meta.mastering_display_actual_peak_luminance_flag = reader.read_bit()?;
         if meta.mastering_display_actual_peak_luminance_flag {
             let amd = ActualMasteringDisplay::parse(&mut reader)?;
             meta.actual_mastering_display = Some(amd);
         }
 
         for _ in 0..meta.num_windows {
-            meta.tone_mapping_flag = reader.get()?;
+            meta.tone_mapping_flag = reader.read_bit()?;
 
             if meta.tone_mapping_flag {
                 let bc = BezierCurve::parse(&mut reader)?;
@@ -176,9 +176,9 @@ impl Hdr10PlusMetadata {
             }
         }
 
-        meta.color_saturation_mapping_flag = reader.get()?;
+        meta.color_saturation_mapping_flag = reader.read_bit()?;
         if meta.color_saturation_mapping_flag {
-            meta.color_saturation_weight = reader.get_n(6)?;
+            meta.color_saturation_weight = reader.read::<6, u8>()?;
         }
 
         meta.set_profile();
@@ -279,14 +279,14 @@ impl Hdr10PlusMetadata {
         let mut writer = BitstreamIoWriter::with_capacity(64);
 
         if opts.with_country_code {
-            writer.write_n(&self.itu_t_t35_country_code, 8)?;
+            writer.write::<8, u8>(self.itu_t_t35_country_code)?;
         }
 
-        writer.write_n(&self.itu_t_t35_terminal_provider_code, 16)?;
-        writer.write_n(&self.itu_t_t35_terminal_provider_oriented_code, 16)?;
-        writer.write_n(&self.application_identifier, 8)?;
-        writer.write_n(&self.application_version, 8)?;
-        writer.write_n(&self.num_windows, 2)?;
+        writer.write::<16, u16>(self.itu_t_t35_terminal_provider_code)?;
+        writer.write::<16, u16>(self.itu_t_t35_terminal_provider_oriented_code)?;
+        writer.write::<8, u8>(self.application_identifier)?;
+        writer.write::<8, u8>(self.application_version)?;
+        writer.write::<2, u8>(self.num_windows)?;
 
         if let Some(pws) = &self.processing_windows {
             for pw in pws {
@@ -294,46 +294,46 @@ impl Hdr10PlusMetadata {
             }
         }
 
-        writer.write_n(&self.targeted_system_display_maximum_luminance, 27)?;
+        writer.write::<27, u32>(self.targeted_system_display_maximum_luminance)?;
 
-        writer.write(self.targeted_system_display_actual_peak_luminance_flag)?;
+        writer.write_bit(self.targeted_system_display_actual_peak_luminance_flag)?;
         if let Some(atsd) = &self.actual_targeted_system_display {
             atsd.encode(&mut writer)?;
         }
 
         for _ in 0..self.num_windows {
-            for e in &self.maxscl {
-                writer.write_n(e, 17)?;
+            for e in self.maxscl {
+                writer.write::<17, u32>(e)?;
             }
 
-            writer.write_n(&self.average_maxrgb, 17)?;
+            writer.write::<17, u32>(self.average_maxrgb)?;
 
-            writer.write_n(&self.num_distribution_maxrgb_percentiles, 4)?;
+            writer.write::<4, u8>(self.num_distribution_maxrgb_percentiles)?;
 
             for dm in &self.distribution_maxrgb {
                 dm.encode(&mut writer)?;
             }
 
-            writer.write_n(&self.fraction_bright_pixels, 10)?;
+            writer.write::<10, u16>(self.fraction_bright_pixels)?;
         }
 
-        writer.write(self.mastering_display_actual_peak_luminance_flag)?;
+        writer.write_bit(self.mastering_display_actual_peak_luminance_flag)?;
 
         if let Some(amd) = &self.actual_mastering_display {
             amd.encode(&mut writer)?;
         }
 
         for _ in 0..self.num_windows {
-            writer.write(self.tone_mapping_flag)?;
+            writer.write_bit(self.tone_mapping_flag)?;
 
             if let Some(bc) = &self.bezier_curve {
                 bc.encode(&mut writer)?;
             }
         }
 
-        writer.write(self.color_saturation_mapping_flag)?;
+        writer.write_bit(self.color_saturation_mapping_flag)?;
         if self.color_saturation_mapping_flag {
-            writer.write_n(&self.color_saturation_weight, 6)?;
+            writer.write::<6, u8>(self.color_saturation_weight)?;
         }
 
         writer.byte_align()?;
@@ -380,8 +380,8 @@ impl Hdr10PlusMetadata {
 impl DistributionMaxRgb {
     fn parse(reader: &mut BsIoSliceReader) -> Result<DistributionMaxRgb> {
         Ok(DistributionMaxRgb {
-            percentage: reader.get_n(7)?,
-            percentile: reader.get_n(17)?,
+            percentage: reader.read::<7, u8>()?,
+            percentile: reader.read::<17, u32>()?,
         })
     }
 
@@ -427,8 +427,8 @@ impl DistributionMaxRgb {
     }
 
     fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        writer.write_n(&self.percentage, 7)?;
-        writer.write_n(&self.percentile, 17)?;
+        writer.write::<7, u8>(self.percentage)?;
+        writer.write::<17, u32>(self.percentile)?;
 
         Ok(())
     }
@@ -437,32 +437,32 @@ impl DistributionMaxRgb {
 impl ProcessingWindow {
     fn parse(reader: &mut BsIoSliceReader) -> Result<ProcessingWindow> {
         Ok(ProcessingWindow {
-            window_upper_left_corner_x: reader.get_n(16)?,
-            window_upper_left_corner_y: reader.get_n(16)?,
-            window_lower_right_corner_x: reader.get_n(16)?,
-            window_lower_right_corner_y: reader.get_n(16)?,
-            center_of_ellipse_x: reader.get_n(16)?,
-            center_of_ellipse_y: reader.get_n(16)?,
-            rotation_angle: reader.get_n(8)?,
-            semimajor_axis_internal_ellipse: reader.get_n(16)?,
-            semimajor_axis_external_ellipse: reader.get_n(16)?,
-            semiminor_axis_external_ellipse: reader.get_n(16)?,
-            overlap_process_option: reader.get()?,
+            window_upper_left_corner_x: reader.read::<16, u16>()?,
+            window_upper_left_corner_y: reader.read::<16, u16>()?,
+            window_lower_right_corner_x: reader.read::<16, u16>()?,
+            window_lower_right_corner_y: reader.read::<16, u16>()?,
+            center_of_ellipse_x: reader.read::<16, u16>()?,
+            center_of_ellipse_y: reader.read::<16, u16>()?,
+            rotation_angle: reader.read::<8, u8>()?,
+            semimajor_axis_internal_ellipse: reader.read::<16, u16>()?,
+            semimajor_axis_external_ellipse: reader.read::<16, u16>()?,
+            semiminor_axis_external_ellipse: reader.read::<16, u16>()?,
+            overlap_process_option: reader.read_bit()?,
         })
     }
 
     fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        writer.write_n(&self.window_upper_left_corner_x, 16)?;
-        writer.write_n(&self.window_upper_left_corner_y, 16)?;
-        writer.write_n(&self.window_lower_right_corner_x, 16)?;
-        writer.write_n(&self.window_lower_right_corner_y, 16)?;
-        writer.write_n(&self.center_of_ellipse_x, 16)?;
-        writer.write_n(&self.center_of_ellipse_y, 16)?;
-        writer.write_n(&self.rotation_angle, 8)?;
-        writer.write_n(&self.semimajor_axis_internal_ellipse, 16)?;
-        writer.write_n(&self.semimajor_axis_external_ellipse, 16)?;
-        writer.write_n(&self.semimajor_axis_external_ellipse, 16)?;
-        writer.write(self.overlap_process_option)?;
+        writer.write::<16, u16>(self.window_upper_left_corner_x)?;
+        writer.write::<16, u16>(self.window_upper_left_corner_y)?;
+        writer.write::<16, u16>(self.window_lower_right_corner_x)?;
+        writer.write::<16, u16>(self.window_lower_right_corner_y)?;
+        writer.write::<16, u16>(self.center_of_ellipse_x)?;
+        writer.write::<16, u16>(self.center_of_ellipse_y)?;
+        writer.write::<8, u8>(self.rotation_angle)?;
+        writer.write::<16, u16>(self.semimajor_axis_internal_ellipse)?;
+        writer.write::<16, u16>(self.semimajor_axis_external_ellipse)?;
+        writer.write::<16, u16>(self.semimajor_axis_external_ellipse)?;
+        writer.write_bit(self.overlap_process_option)?;
 
         Ok(())
     }
@@ -471,8 +471,8 @@ impl ProcessingWindow {
 impl ActualTargetedSystemDisplay {
     fn parse(reader: &mut BsIoSliceReader) -> Result<ActualTargetedSystemDisplay> {
         let mut atsd = ActualTargetedSystemDisplay {
-            num_rows_targeted_system_display_actual_peak_luminance: reader.get_n(5)?,
-            num_cols_targeted_system_display_actual_peak_luminance: reader.get_n(5)?,
+            num_rows_targeted_system_display_actual_peak_luminance: reader.read::<5, u8>()?,
+            num_cols_targeted_system_display_actual_peak_luminance: reader.read::<5, u8>()?,
             ..Default::default()
         };
 
@@ -483,7 +483,8 @@ impl ActualTargetedSystemDisplay {
 
         for i in 0..atsd.num_rows_targeted_system_display_actual_peak_luminance as usize {
             for j in 0..atsd.num_cols_targeted_system_display_actual_peak_luminance as usize {
-                atsd.targeted_system_display_actual_peak_luminance[i][j] = reader.get_n(4)?;
+                atsd.targeted_system_display_actual_peak_luminance[i][j] =
+                    reader.read::<4, u8>()?;
             }
         }
 
@@ -491,18 +492,12 @@ impl ActualTargetedSystemDisplay {
     }
 
     fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        writer.write_n(
-            &self.num_rows_targeted_system_display_actual_peak_luminance,
-            5,
-        )?;
-        writer.write_n(
-            &self.num_cols_targeted_system_display_actual_peak_luminance,
-            5,
-        )?;
+        writer.write::<5, u8>(self.num_rows_targeted_system_display_actual_peak_luminance)?;
+        writer.write::<5, u8>(self.num_cols_targeted_system_display_actual_peak_luminance)?;
 
         for i in 0..self.num_rows_targeted_system_display_actual_peak_luminance as usize {
             for j in 0..self.num_cols_targeted_system_display_actual_peak_luminance as usize {
-                writer.write_n(&self.targeted_system_display_actual_peak_luminance[i][j], 4)?;
+                writer.write::<4, u8>(self.targeted_system_display_actual_peak_luminance[i][j])?;
             }
         }
 
@@ -513,8 +508,8 @@ impl ActualTargetedSystemDisplay {
 impl ActualMasteringDisplay {
     fn parse(reader: &mut BsIoSliceReader) -> Result<ActualMasteringDisplay> {
         let mut amd = ActualMasteringDisplay {
-            num_rows_mastering_display_actual_peak_luminance: reader.get_n(5)?,
-            num_cols_mastering_display_actual_peak_luminanc: reader.get_n(5)?,
+            num_rows_mastering_display_actual_peak_luminance: reader.read::<5, u8>()?,
+            num_cols_mastering_display_actual_peak_luminanc: reader.read::<5, u8>()?,
             ..Default::default()
         };
 
@@ -525,7 +520,7 @@ impl ActualMasteringDisplay {
 
         for i in 0..amd.num_rows_mastering_display_actual_peak_luminance as usize {
             for j in 0..amd.num_cols_mastering_display_actual_peak_luminanc as usize {
-                amd.mastering_display_actual_peak_luminance[i][j] = reader.get_n(4)?;
+                amd.mastering_display_actual_peak_luminance[i][j] = reader.read::<4, u8>()?;
             }
         }
 
@@ -533,12 +528,12 @@ impl ActualMasteringDisplay {
     }
 
     fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        writer.write_n(&self.num_rows_mastering_display_actual_peak_luminance, 5)?;
-        writer.write_n(&self.num_cols_mastering_display_actual_peak_luminanc, 5)?;
+        writer.write::<5, u8>(self.num_rows_mastering_display_actual_peak_luminance)?;
+        writer.write::<5, u8>(self.num_cols_mastering_display_actual_peak_luminanc)?;
 
         for i in 0..self.num_rows_mastering_display_actual_peak_luminance as usize {
             for j in 0..self.num_cols_mastering_display_actual_peak_luminanc as usize {
-                writer.write_n(&self.mastering_display_actual_peak_luminance[i][j], 4)?;
+                writer.write::<4, u8>(self.mastering_display_actual_peak_luminance[i][j])?;
             }
         }
 
@@ -549,9 +544,9 @@ impl ActualMasteringDisplay {
 impl BezierCurve {
     fn parse(reader: &mut BsIoSliceReader) -> Result<BezierCurve> {
         let mut bc = BezierCurve {
-            knee_point_x: reader.get_n(12)?,
-            knee_point_y: reader.get_n(12)?,
-            num_bezier_curve_anchors: reader.get_n(4)?,
+            knee_point_x: reader.read::<12, u16>()?,
+            knee_point_y: reader.read::<12, u16>()?,
+            num_bezier_curve_anchors: reader.read::<4, u8>()?,
             ..Default::default()
         };
 
@@ -559,7 +554,7 @@ impl BezierCurve {
             .resize(bc.num_bezier_curve_anchors as usize, 0);
 
         for i in 0..bc.num_bezier_curve_anchors as usize {
-            bc.bezier_curve_anchors[i] = reader.get_n(10)?;
+            bc.bezier_curve_anchors[i] = reader.read::<10, u16>()?;
         }
 
         Ok(bc)
@@ -597,12 +592,12 @@ impl BezierCurve {
     }
 
     fn encode(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        writer.write_n(&self.knee_point_x, 12)?;
-        writer.write_n(&self.knee_point_y, 12)?;
-        writer.write_n(&self.num_bezier_curve_anchors, 4)?;
+        writer.write::<12, u16>(self.knee_point_x)?;
+        writer.write::<12, u16>(self.knee_point_y)?;
+        writer.write::<4, u8>(self.num_bezier_curve_anchors)?;
 
-        for e in &self.bezier_curve_anchors {
-            writer.write_n(e, 10)?;
+        for e in self.bezier_curve_anchors.iter().copied() {
+            writer.write::<10, u16>(e)?;
         }
 
         Ok(())

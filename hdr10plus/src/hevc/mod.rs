@@ -15,13 +15,13 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
     // Write NALU SEI_PREFIX header
     let mut header_writer = BitstreamIoWriter::with_capacity(64);
 
-    header_writer.write(false)?; // forbidden_zero_bit
+    header_writer.write_bit(false)?; // forbidden_zero_bit
 
-    header_writer.write_n(&NAL_SEI_PREFIX, 6)?; // nal_type
-    header_writer.write_n(&0_u8, 6)?; // nuh_layer_id
-    header_writer.write_n(&1_u8, 3)?; // nuh_temporal_id_plus1
+    header_writer.write::<6, u8>(NAL_SEI_PREFIX)?; // nal_type
+    header_writer.write_const::<6, 0>()?; // nuh_layer_id
+    header_writer.write_const::<3, 1>()?; // nuh_temporal_id_plus1
 
-    header_writer.write_n(&USER_DATA_REGISTERED_ITU_T_35, 8)?;
+    header_writer.write::<8, u8>(USER_DATA_REGISTERED_ITU_T_35)?;
 
     let mut payload = metadata.encode_with_opts(&opts)?;
 
@@ -32,7 +32,7 @@ pub fn encode_hdr10plus_nal(metadata: &Hdr10PlusMetadata, validate: bool) -> Res
         payload.len()
     );
 
-    header_writer.write_n(&(payload.len() as u64), 8)?;
+    header_writer.write::<8, u8>(payload.len() as u8)?;
 
     payload.push(0x80);
 
