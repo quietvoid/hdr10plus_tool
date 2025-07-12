@@ -37,3 +37,8 @@ members = [
 default = ["system-font"]
 system-font = ["plotters/ttf"]
 internal-font = ["plotters/ab_glyph"]
+
+[profile.release-deploy]
+inherits = "release"
+lto = "thin"
+strip = "symbols"
