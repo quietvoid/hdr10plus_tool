@@ -1,5 +1,4 @@
 use anyhow::Result;
-use hevc_parser::io::IoFormat;
 
 use super::{CliOptions, ExtractArgs, input_from_either};
 use crate::core::initialize_progress_bar;
@@ -19,10 +18,6 @@ impl Extractor {
         let input = input_from_either("extract", input, input_pos)?;
 
         let format = hevc_parser::io::format_from_path(&input)?;
-
-        if format == IoFormat::Matroska {
-            println!("Extractor: Matroska input is experimental!");
-        }
 
         if !options.verify && output.is_none() {
             options.verify = true

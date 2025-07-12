@@ -28,7 +28,7 @@ Options that apply to the commands:
 
     Input file:
     - HEVC bitstream
-    - Matroska (experimental): MKV file containing a HEVC video track.
+    - Matroska: MKV file containing a HEVC video track.
 
 
     **Flags**:
@@ -40,7 +40,7 @@ Options that apply to the commands:
     ```console
     hdr10plus_tool extract video.hevc -o metadata.json
 
-    # Experimental
+    # Directly using MKV file
     hdr10plus_tool extract video.mkv -o metadata.json
     ```
     ```console
