@@ -165,9 +165,7 @@ impl EditConfig {
                 ensure!(end < metadata.len(), "invalid end range {}", end);
 
                 amount += end - start + 1;
-                for _ in 0..amount {
-                    metadata.remove(start);
-                }
+                metadata.drain(start..=end);
             } else if let Ok(index) = range.parse::<usize>() {
                 ensure!(
                     index < metadata.len(),
