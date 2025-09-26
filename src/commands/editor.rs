@@ -158,18 +158,14 @@ impl EditConfig {
         metadata: &mut Vec<Hdr10PlusMetadata>,
     ) -> Result<()> {
         let mut amount = 0;
-        let mut amplitude = 0;
 
         for range in ranges {
             if range.contains('-') {
                 let (start, end) = EditConfig::range_string_to_tuple(range)?;
                 ensure!(end < metadata.len(), "invalid end range {}", end);
 
-                amplitude = end - start + 1;
-                amount += amplitude;
-                for _ in 0..amplitude {
-                    metadata.remove(start);
-                }
+                amount += end - start + 1;
+                metadata.drain(start..=end);
             } else if let Ok(index) = range.parse::<usize>() {
                 ensure!(
                     index < metadata.len(),
