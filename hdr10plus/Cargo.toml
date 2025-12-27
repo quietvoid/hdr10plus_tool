@@ -1,6 +1,6 @@
 [package]
 name = "hdr10plus"
-version = "2.1.4"
+version = "2.1.5"
 authors = ["quietvoid"]
 edition = "2024"
 rust-version = "1.85.0"
@@ -19,8 +19,8 @@ serde_json = { version = "1.0.148", features = ["preserve_order"], optional = tr
 libc = { version = "0.2", optional = true }
 
 [features]
-hevc = ["hevc_parser"]
-json = ["serde", "serde_json"]
+hevc = ["dep:hevc_parser"]
+json = ["dep:serde", "dep:serde_json"]
 capi = ["libc", "json"]
 
 [package.metadata.docs.rs]

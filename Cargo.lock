@@ -601,7 +601,7 @@ checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 
 [[package]]
 name = "hdr10plus"
-version = "2.1.4"
+version = "2.1.5"
 dependencies = [
  "anyhow",
  "bitvec_helpers",
@@ -613,7 +613,7 @@ dependencies = [
 
 [[package]]
 name = "hdr10plus_tool"
-version = "1.7.1"
+version = "1.7.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
