@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo;
 use assert_fs::prelude::*;
 use predicates::prelude::*;
 
@@ -10,11 +10,10 @@ use hdr10plus::{
     metadata_json::MetadataJsonRoot,
 };
 
-const TOOL_NAME: &str = env!("CARGO_PKG_NAME");
 const SUBCOMMAND: &str = "extract";
 
 fn assert_cmd_output(input: &Path, output: &Path, validate: bool) -> Result<()> {
-    let mut cmd = Command::cargo_bin(TOOL_NAME)?;
+    let mut cmd = cargo::cargo_bin_cmd!();
 
     if !validate {
         cmd.arg("--skip-validation");
@@ -69,7 +68,7 @@ fn assert_scene_info(
 
 #[test]
 fn help() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let assert = cmd.arg(SUBCOMMAND).arg("--help").assert();
 
     assert
@@ -1945,7 +1944,7 @@ fn dhdr10_opt_gaps() -> Result<()> {
 
 #[test]
 fn pts_injected() -> Result<()> {
-    let mut cmd = Command::cargo_bin(TOOL_NAME)?;
+    let mut cmd = cargo::cargo_bin_cmd!();
 
     let input_file = Path::new("assets/hevc_tests/pts_injected.hevc");
     let temp = assert_fs::TempDir::new()?;
@@ -1970,7 +1969,7 @@ fn pts_injected() -> Result<()> {
 
 #[test]
 fn dts_injected() -> Result<()> {
-    let mut cmd = Command::cargo_bin(TOOL_NAME)?;
+    let mut cmd = cargo::cargo_bin_cmd!();
 
     let input_file = Path::new("assets/hevc_tests/dts_injected.hevc");
     let temp = assert_fs::TempDir::new()?;

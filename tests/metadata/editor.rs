@@ -1,7 +1,7 @@
 use std::{fs::File, path::Path};
 
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo;
 use assert_fs::prelude::*;
 use hdr10plus::metadata_json::MetadataJsonRoot;
 use predicates::prelude::*;
@@ -10,7 +10,7 @@ const SUBCOMMAND: &str = "editor";
 
 #[test]
 fn help() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let assert = cmd.arg(SUBCOMMAND).arg("--help").assert();
 
     assert
@@ -24,7 +24,7 @@ fn help() -> Result<()> {
 
 #[test]
 fn duplicate() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_json = Path::new("assets/hevc_tests/regular_metadata.json");
@@ -73,7 +73,7 @@ fn duplicate() -> Result<()> {
 
 #[test]
 fn remove() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_json = Path::new("assets/hevc_tests/regular_metadata.json");

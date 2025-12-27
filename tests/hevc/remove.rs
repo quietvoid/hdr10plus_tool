@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo;
 use assert_fs::prelude::*;
 use predicates::prelude::*;
 
@@ -9,7 +9,7 @@ const SUBCOMMAND: &str = "remove";
 
 #[test]
 fn help() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let assert = cmd.arg(SUBCOMMAND).arg("--help").assert();
 
     assert
@@ -23,7 +23,7 @@ fn help() -> Result<()> {
 
 #[test]
 fn remove() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_file = Path::new("assets/hevc_tests/regular.hevc");
@@ -49,7 +49,7 @@ fn remove() -> Result<()> {
 
 #[test]
 fn sei_double_3byte_case() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_file = Path::new("assets/hevc_tests/sei-double-3byte-case.hevc");

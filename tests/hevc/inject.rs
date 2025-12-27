@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo;
 use assert_fs::prelude::*;
 use predicates::prelude::*;
 
@@ -9,7 +9,7 @@ const SUBCOMMAND: &str = "inject";
 
 #[test]
 fn help() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let assert = cmd.arg(SUBCOMMAND).arg("--help").assert();
 
     assert
@@ -23,7 +23,7 @@ fn help() -> Result<()> {
 
 #[test]
 fn inject() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_file = Path::new("assets/hevc_tests/regular_bl_start_code_4.hevc");
@@ -52,7 +52,7 @@ fn inject() -> Result<()> {
 
 #[test]
 fn and_extract() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_file = Path::new("assets/hevc_tests/regular_bl_start_code_4.hevc");
@@ -78,7 +78,7 @@ fn and_extract() -> Result<()> {
 
     let output_json = temp.child("metadata.json");
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
 
     let assert = cmd
         .arg("extract")
@@ -98,7 +98,7 @@ fn and_extract() -> Result<()> {
 
 #[test]
 fn inject_replace() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_file = Path::new("assets/hevc_tests/single-frame.hevc");
@@ -124,7 +124,7 @@ fn inject_replace() -> Result<()> {
 
     let output_json = temp.child("metadata.json");
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
 
     let assert = cmd
         .arg("extract")
@@ -146,7 +146,7 @@ fn inject_replace() -> Result<()> {
 // And places it back outside as an independent SEI NALU
 #[test]
 fn inject_replace_multimsg() -> Result<()> {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
     let temp = assert_fs::TempDir::new().unwrap();
 
     let input_file = Path::new("assets/hevc_tests/multimsg-sei.hevc");
@@ -172,7 +172,7 @@ fn inject_replace_multimsg() -> Result<()> {
 
     let output_json = temp.child("metadata.json");
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME"))?;
+    let mut cmd = cargo::cargo_bin_cmd!();
 
     let assert = cmd
         .arg("extract")
