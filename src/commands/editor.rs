@@ -19,7 +19,7 @@ pub struct Editor {
     edits_json: PathBuf,
     output: PathBuf,
 
-    metadata_list: Vec<Hdr10PlusMetadata>,
+    metadata_list: Vec<Option<Hdr10PlusMetadata>>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -70,6 +70,9 @@ impl Editor {
             .collect();
         ensure!(metadata_json_root.scene_info.len() == metadata_list.len());
 
+        let metadata_list: Vec<Option<Hdr10PlusMetadata>> =
+            metadata_list.into_iter().map(Some).collect();
+
         let mut editor = Editor {
             edits_json,
             output: out_path,
@@ -89,7 +92,9 @@ impl Editor {
         print!("Generating and writing metadata to JSON file... ");
         stdout().flush().ok();
 
-        let list: Vec<&Hdr10PlusMetadata> = editor.metadata_list.iter().collect();
+        let list = config.finalize(&mut editor.metadata_list)?;
+        let list: Vec<&Hdr10PlusMetadata> = list.iter().collect();
+
         let final_json = generate_json(&list, TOOL_NAME, TOOL_VERSION);
 
         writeln!(writer, "{}", serde_json::to_string_pretty(&final_json)?)?;
@@ -115,17 +120,27 @@ impl EditConfig {
         Ok(config)
     }
 
-    fn execute(self, metadata: &mut Vec<Hdr10PlusMetadata>) -> Result<()> {
+    fn execute(&self, metadata_list: &mut [Option<Hdr10PlusMetadata>]) -> Result<()> {
         // Drop metadata frames
         if let Some(ranges) = &self.remove {
-            self.remove_frames(ranges, metadata)?;
-        }
-
-        if let Some(to_duplicate) = &self.duplicate {
-            self.duplicate_metadata(to_duplicate, metadata)?;
+            self.remove_frames(ranges, metadata_list)?;
         }
 
         Ok(())
+    }
+
+    fn finalize(
+        &self,
+        metadata_list: &mut [Option<Hdr10PlusMetadata>],
+    ) -> Result<Vec<Hdr10PlusMetadata>> {
+        let mut list: Vec<Hdr10PlusMetadata> =
+            metadata_list.iter().filter_map(|e| e.clone()).collect();
+
+        if let Some(to_duplicate) = &self.duplicate {
+            self.duplicate_metadata(to_duplicate, &mut list)?;
+        }
+
+        Ok(list)
     }
 
     fn range_string_to_tuple(range: &str) -> Result<(usize, usize)> {
@@ -155,25 +170,27 @@ impl EditConfig {
     fn remove_frames(
         &self,
         ranges: &[String],
-        metadata: &mut Vec<Hdr10PlusMetadata>,
+        metadata_list: &mut [Option<Hdr10PlusMetadata>],
     ) -> Result<()> {
         let mut amount = 0;
 
         for range in ranges {
             if range.contains('-') {
                 let (start, end) = EditConfig::range_string_to_tuple(range)?;
-                ensure!(end < metadata.len(), "invalid end range {}", end);
+                ensure!(end < metadata_list.len(), "invalid end range {}", end);
 
                 amount += end - start + 1;
-                metadata.drain(start..=end);
+                metadata_list[start..=end]
+                    .iter_mut()
+                    .for_each(|e| *e = None);
             } else if let Ok(index) = range.parse::<usize>() {
                 ensure!(
-                    index < metadata.len(),
+                    index < metadata_list.len(),
                     "invalid frame index to remove {}",
                     index
                 );
 
-                metadata.remove(index);
+                metadata_list[index] = None;
 
                 amount += 1;
             }
