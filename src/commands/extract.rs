@@ -10,7 +10,7 @@ use hdr10plus::metadata_json::generate_json;
 use super::{CliOptions, ExtractArgs, input_from_either};
 use crate::core::ParserError;
 use crate::core::av1_parser::{
-    Av1NaluParser, Obu, OBU_METADATA, extract_hdr10plus_t35_bytes,
+    Obu, OBU_METADATA, extract_hdr10plus_t35_bytes,
     read_ivf_frame_header, read_obus_from_ivf_frame, try_read_ivf_file_header,
 };
 use crate::core::initialize_progress_bar;
@@ -68,7 +68,6 @@ impl Extractor {
         let file = File::open(&input)?;
         let mut reader = BufReader::with_capacity(100_000, file);
 
-        let mut av1_nalu_parser = Av1NaluParser::new();
         let mut t35_frames: Vec<Vec<u8>> = Vec::new();
         let mut obu_count = 0u64;
 
@@ -85,7 +84,6 @@ impl Extractor {
 
                 let obus = read_obus_from_ivf_frame(frame_data)?;
                 for obu in &obus {
-                    av1_nalu_parser.process_obu(obu)?;
                     if obu.obu_type == OBU_METADATA {
                         if let Some(t35) =
                             extract_hdr10plus_t35_bytes(&obu.payload, options.validate)
@@ -107,8 +105,6 @@ impl Extractor {
             loop {
                 match Obu::read_from(&mut reader) {
                     Ok(Some(obu)) => {
-                        av1_nalu_parser.process_obu(&obu)?;
-
                         if obu.obu_type == OBU_METADATA {
                             if let Some(t35) =
                                 extract_hdr10plus_t35_bytes(&obu.payload, options.validate)

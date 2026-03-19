@@ -12,9 +12,15 @@ use hevc_parser::io::{FrameBuffer, IoFormat, IoProcessor, NalBuffer, processor};
 use hevc_parser::{HevcParser, NALUStartCode, hevc::*};
 use processor::{HevcProcessor, HevcProcessorOpts};
 
+use hdr10plus::av1::encode_av1_from_json;
 use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
 
 use crate::commands::InjectArgs;
+use crate::core::av1_parser::{
+    IvfFrameHeader, Obu, OBU_TEMPORAL_DELIMITER, is_hdr10plus_obu,
+    read_ivf_frame_header, read_obus_from_ivf_frame, try_read_ivf_file_header,
+    write_ivf_frame_header,
+};
 use crate::core::{initialize_progress_bar, st2094_40_sei_msg};
 
 use super::{CliOptions, input_from_either};
@@ -121,13 +127,6 @@ impl Injector {
     }
 
     fn inject_json_av1(args: InjectArgs, cli_options: CliOptions) -> Result<()> {
-        use crate::core::av1_parser::{
-            Av1NaluParser, IvfFrameHeader, Obu, OBU_TEMPORAL_DELIMITER, is_hdr10plus_obu,
-            read_ivf_frame_header, read_obus_from_ivf_frame, try_read_ivf_file_header,
-            write_ivf_frame_header,
-        };
-        use hdr10plus::av1::encode_av1_from_json;
-
         let InjectArgs {
             input,
             input_pos,
@@ -221,7 +220,6 @@ impl Injector {
             }
         } else {
             // Raw OBU stream
-            let mut av1_parser = Av1NaluParser::new();
             let mut tu_index = 0usize;
             let mut last_encoded: Option<Vec<u8>> = None;
             let mut warned_existing = false;
@@ -288,7 +286,6 @@ impl Injector {
                 match obu_opt {
                     None => break,
                     Some(obu) => {
-                        av1_parser.process_obu(&obu)?;
                         if obu.obu_type == OBU_TEMPORAL_DELIMITER {
                             current_td = Some(obu);
                             pending.clear();
@@ -314,13 +311,7 @@ impl Injector {
         Ok(())
     }
 
-    fn build_av1_output_frame(
-        obus: &[crate::core::av1_parser::Obu],
-        encoded: &[u8],
-        validate: bool,
-    ) -> Vec<u8> {
-        use crate::core::av1_parser::{OBU_TEMPORAL_DELIMITER, is_hdr10plus_obu};
-
+    fn build_av1_output_frame(obus: &[Obu], encoded: &[u8], validate: bool) -> Vec<u8> {
         let mut out = Vec::new();
         let mut injected = false;
 

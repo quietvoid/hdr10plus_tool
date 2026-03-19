@@ -11,6 +11,10 @@ use indicatif::ProgressBar;
 use hevc_parser::io::{IoFormat, IoProcessor};
 
 use super::{CliOptions, RemoveArgs, input_from_either};
+use crate::core::av1_parser::{
+    Obu, is_hdr10plus_obu, read_ivf_frame_header, read_obus_from_ivf_frame,
+    try_read_ivf_file_header, write_ivf_frame_header,
+};
 use crate::core::{initialize_progress_bar, prefix_sei_removed_hdr10plus_nalu};
 
 fn is_av1_input(path: &Path) -> bool {
@@ -69,11 +73,6 @@ impl Remover {
         output: Option<PathBuf>,
         options: CliOptions,
     ) -> Result<()> {
-        use crate::core::av1_parser::{
-            Obu, is_hdr10plus_obu, read_ivf_frame_header, read_obus_from_ivf_frame,
-            try_read_ivf_file_header, write_ivf_frame_header,
-        };
-
         let out_path = output.unwrap_or_else(|| PathBuf::from("hdr10plus_removed_output.av1"));
 
         let file = File::open(&input)?;
