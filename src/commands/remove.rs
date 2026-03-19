@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::PathBuf;
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
 use hevc_parser::HevcParser;
@@ -13,6 +13,13 @@ use hevc_parser::io::{IoFormat, IoProcessor};
 use super::{CliOptions, RemoveArgs, input_from_either};
 use crate::core::{initialize_progress_bar, prefix_sei_removed_hdr10plus_nalu};
 
+fn is_av1_input(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some("av1") | Some("ivf")
+    )
+}
+
 pub struct Remover {
     input: PathBuf,
     progress_bar: ProgressBar,
@@ -20,7 +27,7 @@ pub struct Remover {
 }
 
 impl Remover {
-    pub fn remove_sei(args: RemoveArgs, _options: CliOptions) -> Result<()> {
+    pub fn remove_sei(args: RemoveArgs, options: CliOptions) -> Result<()> {
         let RemoveArgs {
             input,
             input_pos,
@@ -28,29 +35,104 @@ impl Remover {
         } = args;
         let input = input_from_either("remove", input, input_pos)?;
 
-        let format = hevc_parser::io::format_from_path(&input)?;
+        if is_av1_input(&input) {
+            Self::remove_sei_av1(input, output, options)
+        } else {
+            let format = hevc_parser::io::format_from_path(&input)?;
 
-        if format == IoFormat::Matroska {
-            bail!("Remover: Matroska format unsupported");
+            if format == IoFormat::Matroska {
+                bail!("Remover: Matroska format unsupported");
+            }
+
+            let hevc_out = match output {
+                Some(path) => path,
+                None => PathBuf::from("hdr10plus_removed_output.hevc"),
+            };
+
+            let pb = initialize_progress_bar(&format, &input)?;
+
+            let mut remover = Remover {
+                input,
+                progress_bar: pb,
+                writer: BufWriter::with_capacity(
+                    100_000,
+                    File::create(hevc_out).expect("Can't create file"),
+                ),
+            };
+
+            remover.process_input(&format)
+        }
+    }
+
+    fn remove_sei_av1(
+        input: PathBuf,
+        output: Option<PathBuf>,
+        options: CliOptions,
+    ) -> Result<()> {
+        use crate::core::av1_parser::{
+            Obu, is_hdr10plus_obu, read_ivf_frame_header, read_obus_from_ivf_frame,
+            try_read_ivf_file_header, write_ivf_frame_header,
+        };
+
+        let out_path = output.unwrap_or_else(|| PathBuf::from("hdr10plus_removed_output.av1"));
+
+        let file = File::open(&input)?;
+        let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
+        let mut reader = BufReader::with_capacity(100_000, file);
+
+        let out_file = File::create(&out_path).expect("Can't create output file");
+        let mut writer = BufWriter::with_capacity(100_000, out_file);
+
+        let pb = initialize_progress_bar(&IoFormat::Raw, &input)?;
+        let mut bytes_read = 0u64;
+
+        if let Some(ivf_header) = try_read_ivf_file_header(&mut reader)? {
+            writer.write_all(&ivf_header)?;
+            bytes_read += ivf_header.len() as u64;
+
+            loop {
+                let fh = match read_ivf_frame_header(&mut reader)? {
+                    Some(h) => h,
+                    None => break,
+                };
+                bytes_read += 12;
+                pb.set_position(bytes_read * 100 / file_len.max(1));
+
+                let mut frame_data = vec![0u8; fh.frame_size as usize];
+                reader.read_exact(&mut frame_data)?;
+                bytes_read += fh.frame_size as u64;
+
+                let obus = read_obus_from_ivf_frame(frame_data)?;
+
+                let output_frame: Vec<u8> = obus
+                    .iter()
+                    .filter(|o| !is_hdr10plus_obu(o, options.validate))
+                    .flat_map(|o| o.raw_bytes.iter().copied())
+                    .collect();
+
+                write_ivf_frame_header(&mut writer, output_frame.len() as u32, fh.timestamp)?;
+                writer.write_all(&output_frame)?;
+            }
+        } else {
+            loop {
+                match Obu::read_from(&mut reader) {
+                    Ok(Some(obu)) => {
+                        bytes_read += obu.raw_bytes.len() as u64;
+                        pb.set_position(bytes_read * 100 / file_len.max(1));
+
+                        if !is_hdr10plus_obu(&obu, options.validate) {
+                            writer.write_all(&obu.raw_bytes)?;
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(e) => return Err(e),
+                }
+            }
         }
 
-        let hevc_out = match output {
-            Some(path) => path,
-            None => PathBuf::from("hdr10plus_removed_output.hevc"),
-        };
-
-        let pb = initialize_progress_bar(&format, &input)?;
-
-        let mut remover = Remover {
-            input,
-            progress_bar: pb,
-            writer: BufWriter::with_capacity(
-                100_000,
-                File::create(hevc_out).expect("Can't create file"),
-            ),
-        };
-
-        remover.process_input(&format)
+        pb.finish_and_clear();
+        writer.flush()?;
+        Ok(())
     }
 
     pub fn process_input(&mut self, format: &IoFormat) -> Result<()> {
