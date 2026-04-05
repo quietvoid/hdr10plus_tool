@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-release-env
 
       - name: Install musl-tools
@@ -47,7 +47,7 @@ jobs:
           tar -cvzf ./${AARCH64_ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Linux artifacts
           path: ./${{ env.RELEASE_DIR }}/*
@@ -56,7 +56,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-release-env
 
       - name: Build
@@ -79,7 +79,7 @@ jobs:
           7z a ./${AARCH64_ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}.exe
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Windows artifacts
           path: ./${{ env.RELEASE_DIR }}/*
@@ -88,7 +88,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-release-env
 
       - name: Build
@@ -111,7 +111,7 @@ jobs:
           zip -9 ./${ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macOS artifacts
           path: ./${{ env.RELEASE_DIR }}/*
@@ -126,13 +126,13 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
 
       - name: Display structure of downloaded files
         run: ls -R
 
       - name: Attest
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             Linux artifacts/*

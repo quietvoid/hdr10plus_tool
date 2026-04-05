@@ -12,9 +12,9 @@ repository = "https://github.com/quietvoid/hdr10plus_tool/tree/master/hdr10plus"
 bitvec_helpers = { version = "4.0.1", default-features = false, features = ["bitstream-io"] }
 hevc_parser = { version = "0.6.10", optional = true }
 
-anyhow = "1.0.100"
+anyhow = "1.0.102"
 serde = { version = "1.0.228", features = ["derive"], optional = true }
-serde_json = { version = "1.0.148", features = ["preserve_order"], optional = true }
+serde_json = { version = "1.0.149", features = ["preserve_order"], optional = true }
 
 libc = { version = "0.2", optional = true }
 
