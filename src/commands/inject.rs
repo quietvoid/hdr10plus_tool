@@ -35,7 +35,6 @@ pub struct Injector {
     mismatched_length: bool,
 
     frame_buffer: FrameBuffer,
-    last_metadata_written: Option<NalBuffer>,
 }
 
 impl Injector {
@@ -78,7 +77,6 @@ impl Injector {
                 frame_number: 0,
                 nals: Vec::with_capacity(16),
             },
-            last_metadata_written: None,
         };
 
         println!("Parsing JSON file...");
@@ -164,7 +162,6 @@ impl Injector {
         metadata_list: &[Hdr10PlusJsonMetadata],
         frame_buffer: &FrameBuffer,
         mismatched_length: bool,
-        last_metadata: &Option<NalBuffer>,
         validate: bool,
     ) -> Result<(usize, NalBuffer)> {
         let existing_frame = frames
@@ -174,24 +171,32 @@ impl Injector {
         // If we have a metadata buffered frame, write it
         // Otherwise, write the same data as previous
         let hdr10plus_nb = if let Some(frame) = existing_frame {
-            if let Some(ref mut meta) = metadata_list.get(frame.presentation_number as usize) {
-                let hdr10plus_data = hdr10plus::hevc::encode_hevc_from_json(meta, validate)?;
+            let meta = metadata_list
+                .get(frame.presentation_number as usize)
+                .or_else(|| mismatched_length.then(|| metadata_list.last()).flatten());
+
+            if let Some(meta) = meta {
+                let data = hdr10plus::hevc::encode_hevc_from_json(meta, validate)?;
 
                 Some(NalBuffer {
                     nal_type: NAL_SEI_PREFIX,
                     start_code: NALUStartCode::Length4,
-                    data: hdr10plus_data,
+                    data,
                 })
-            } else if mismatched_length {
-                last_metadata.clone()
             } else {
                 bail!(
                     "No metadata found for presentation frame {}",
                     frame.presentation_number
                 );
             }
-        } else if mismatched_length {
-            last_metadata.clone()
+        } else if mismatched_length && let Some(meta) = metadata_list.last() {
+            let data = hdr10plus::hevc::encode_hevc_from_json(meta, validate)?;
+
+            Some(NalBuffer {
+                nal_type: NAL_UNSPEC62,
+                start_code: NALUStartCode::Length4,
+                data,
+            })
         } else {
             None
         };
@@ -246,11 +251,9 @@ impl IoProcessor for Injector {
                         metadata_list,
                         &self.frame_buffer,
                         self.mismatched_length,
-                        &self.last_metadata_written,
                         self.options.validate,
                     )?;
 
-                    self.last_metadata_written = Some(hdr10plus_nb.clone());
                     self.frame_buffer.nals.insert(idx, hdr10plus_nb);
 
                     // Write NALUs for the frame
@@ -340,11 +343,9 @@ impl IoProcessor for Injector {
                     metadata_list,
                     &self.frame_buffer,
                     self.mismatched_length,
-                    &self.last_metadata_written,
                     self.options.validate,
                 )?;
 
-                self.last_metadata_written = Some(hdr10plus_nb.clone());
                 self.frame_buffer.nals.insert(idx, hdr10plus_nb);
 
                 // Write NALUs for the last frame
