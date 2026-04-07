@@ -11,6 +11,7 @@ use hevc_parser::utils::{
     add_start_code_emulation_prevention_3_byte, clear_start_code_emulation_prevention_3_byte,
 };
 
+pub mod av1_parser;
 pub mod parser;
 
 #[derive(Error, Debug)]

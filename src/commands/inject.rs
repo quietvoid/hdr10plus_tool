@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write, stdout};
-use std::path::PathBuf;
+use std::io::{BufReader, BufWriter, Read, Write, stdout};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
 use hevc_parser::utils::{
@@ -12,12 +12,25 @@ use hevc_parser::io::{FrameBuffer, IoFormat, IoProcessor, NalBuffer, processor};
 use hevc_parser::{HevcParser, NALUStartCode, hevc::*};
 use processor::{HevcProcessor, HevcProcessorOpts};
 
+use hdr10plus::av1::encode_av1_from_json;
 use hdr10plus::metadata_json::{Hdr10PlusJsonMetadata, MetadataJsonRoot};
 
 use crate::commands::InjectArgs;
+use crate::core::av1_parser::{
+    IvfFrameHeader, Obu, OBU_TEMPORAL_DELIMITER, is_hdr10plus_obu,
+    read_ivf_frame_header, read_obus_from_ivf_frame, try_read_ivf_file_header,
+    write_ivf_frame_header,
+};
 use crate::core::{initialize_progress_bar, st2094_40_sei_msg};
 
 use super::{CliOptions, input_from_either};
+
+fn is_av1_input(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some("av1") | Some("ivf")
+    )
+}
 
 pub struct Injector {
     input: PathBuf,
@@ -94,16 +107,234 @@ impl Injector {
 
     pub fn inject_json(args: InjectArgs, cli_options: CliOptions) -> Result<()> {
         let input = input_from_either("inject", args.input.clone(), args.input_pos.clone())?;
-        let format = hevc_parser::io::format_from_path(&input)?;
 
-        if let IoFormat::Raw = format {
-            let mut injector = Injector::from_args(args, cli_options)?;
-
-            injector.process_input()?;
-            injector.interleave_hdr10plus_nals()
+        if is_av1_input(&input) {
+            Self::inject_json_av1(args, cli_options)
         } else {
-            bail!("Injector: Must be a raw HEVC bitstream file")
+            let format = hevc_parser::io::format_from_path(&input)?;
+
+            if let IoFormat::Raw = format {
+                let mut injector = Injector::from_args(args, cli_options)?;
+
+                injector.process_input()?;
+                injector.interleave_hdr10plus_nals()
+            } else {
+                bail!("Injector: Must be a raw HEVC bitstream file")
+            }
         }
+    }
+
+    fn inject_json_av1(args: InjectArgs, cli_options: CliOptions) -> Result<()> {
+        let InjectArgs {
+            input,
+            input_pos,
+            json,
+            output,
+        } = args;
+        let input = input_from_either("inject", input, input_pos)?;
+        let output = output.unwrap_or_else(|| PathBuf::from("injected_output.av1"));
+
+        println!("Parsing JSON file...");
+        stdout().flush().ok();
+
+        let metadata_root = MetadataJsonRoot::from_file(&json)?;
+        let metadata_list: Vec<Hdr10PlusJsonMetadata> = metadata_root.scene_info;
+
+        if metadata_list.is_empty() {
+            bail!("Empty HDR10+ SceneInfo array");
+        }
+
+        let file = File::open(&input)?;
+        let mut reader = BufReader::with_capacity(100_000, file);
+
+        let out_file = File::create(&output).expect("Can't create output file");
+        let mut writer = BufWriter::with_capacity(100_000, out_file);
+
+        let total_meta = metadata_list.len();
+
+        if let Some(ivf_header) = try_read_ivf_file_header(&mut reader)? {
+            writer.write_all(&ivf_header)?;
+
+            let mut tu_index = 0usize;
+            let mut last_encoded: Option<Vec<u8>> = None;
+            let mut warned_existing = false;
+            let mut warned_mismatch = false;
+
+            loop {
+                let fh: IvfFrameHeader = match read_ivf_frame_header(&mut reader)? {
+                    Some(h) => h,
+                    None => break,
+                };
+
+                let mut frame_data = vec![0u8; fh.frame_size as usize];
+                reader.read_exact(&mut frame_data)?;
+
+                let obus = read_obus_from_ivf_frame(frame_data)?;
+
+                if !warned_existing
+                    && obus.iter().any(|o| is_hdr10plus_obu(o, cli_options.validate))
+                {
+                    warned_existing = true;
+                    println!(
+                        "\nWarning: Input file already has HDR10+ metadata OBUs; \
+                         they will be replaced."
+                    );
+                }
+
+                let encoded = if tu_index < total_meta {
+                    let enc =
+                        encode_av1_from_json(&metadata_list[tu_index], cli_options.validate)?;
+                    last_encoded = Some(enc.clone());
+                    enc
+                } else {
+                    if !warned_mismatch {
+                        warned_mismatch = true;
+                        println!(
+                            "\nWarning: mismatched lengths. \
+                             Metadata has {total_meta} entries but video has more frames. \
+                             Last metadata will be duplicated."
+                        );
+                    }
+                    match &last_encoded {
+                        Some(enc) => enc.clone(),
+                        None => bail!("No HDR10+ metadata available for TU {tu_index}"),
+                    }
+                };
+
+                let output_frame =
+                    Self::build_av1_output_frame(&obus, &encoded, cli_options.validate);
+
+                write_ivf_frame_header(&mut writer, output_frame.len() as u32, fh.timestamp)?;
+                writer.write_all(&output_frame)?;
+
+                tu_index += 1;
+            }
+
+            if tu_index < total_meta {
+                println!(
+                    "\nWarning: mismatched lengths. Metadata has {total_meta} entries \
+                     but video has {tu_index} frames. Excess metadata was ignored."
+                );
+            }
+        } else {
+            // Raw OBU stream
+            let mut tu_index = 0usize;
+            let mut last_encoded: Option<Vec<u8>> = None;
+            let mut warned_existing = false;
+            let mut warned_mismatch = false;
+
+            let mut current_td: Option<Obu> = None;
+            let mut pending: Vec<Obu> = Vec::new();
+
+            loop {
+                let obu_opt = Obu::read_from(&mut reader)?;
+                let is_eof = obu_opt.is_none();
+                let is_td = obu_opt
+                    .as_ref()
+                    .map(|o| o.obu_type == OBU_TEMPORAL_DELIMITER)
+                    .unwrap_or(false);
+
+                if (is_eof || is_td) && current_td.is_some() {
+                    if !warned_existing
+                        && pending
+                            .iter()
+                            .any(|o| is_hdr10plus_obu(o, cli_options.validate))
+                    {
+                        warned_existing = true;
+                        println!(
+                            "\nWarning: Input file already has HDR10+ metadata OBUs; \
+                             they will be replaced."
+                        );
+                    }
+
+                    let encoded = if tu_index < total_meta {
+                        let enc = encode_av1_from_json(
+                            &metadata_list[tu_index],
+                            cli_options.validate,
+                        )?;
+                        last_encoded = Some(enc.clone());
+                        enc
+                    } else {
+                        if !warned_mismatch {
+                            warned_mismatch = true;
+                            println!(
+                                "\nWarning: mismatched lengths. \
+                                 Metadata has {total_meta} entries but video has more frames. \
+                                 Last metadata will be duplicated."
+                            );
+                        }
+                        match &last_encoded {
+                            Some(enc) => enc.clone(),
+                            None => bail!("No HDR10+ metadata available for TU {tu_index}"),
+                        }
+                    };
+
+                    let td = current_td.take().unwrap();
+                    writer.write_all(&td.raw_bytes)?;
+                    writer.write_all(&encoded)?;
+                    for obu in pending.drain(..) {
+                        if !is_hdr10plus_obu(&obu, cli_options.validate) {
+                            writer.write_all(&obu.raw_bytes)?;
+                        }
+                    }
+
+                    tu_index += 1;
+                }
+
+                match obu_opt {
+                    None => break,
+                    Some(obu) => {
+                        if obu.obu_type == OBU_TEMPORAL_DELIMITER {
+                            current_td = Some(obu);
+                            pending.clear();
+                        } else if current_td.is_some() {
+                            pending.push(obu);
+                        } else {
+                            writer.write_all(&obu.raw_bytes)?;
+                        }
+                    }
+                }
+            }
+
+            if tu_index < total_meta {
+                println!(
+                    "\nWarning: mismatched lengths. Metadata has {total_meta} entries \
+                     but video has {tu_index} frames. Excess metadata was ignored."
+                );
+            }
+        }
+
+        println!("Rewriting with interleaved HDR10+ metadata OBUs: Done.");
+        writer.flush()?;
+        Ok(())
+    }
+
+    fn build_av1_output_frame(obus: &[Obu], encoded: &[u8], validate: bool) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut injected = false;
+
+        let insert_after_td = obus
+            .iter()
+            .position(|o| o.obu_type == OBU_TEMPORAL_DELIMITER)
+            .map(|i| i + 1)
+            .unwrap_or(0);
+
+        for (i, obu) in obus.iter().enumerate() {
+            if !injected && i == insert_after_td {
+                out.extend_from_slice(encoded);
+                injected = true;
+            }
+            if is_hdr10plus_obu(obu, validate) {
+                continue;
+            }
+            out.extend_from_slice(&obu.raw_bytes);
+        }
+
+        if !injected {
+            out.extend_from_slice(encoded);
+        }
+
+        out
     }
 
     fn process_input(&mut self) -> Result<()> {

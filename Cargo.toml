@@ -8,6 +8,7 @@ license = "MIT"
 
 [dependencies]
 hdr10plus = { path = "./hdr10plus", features = ["hevc", "json"] }
+av1_parser = { path = "av1_parser" }
 bitvec_helpers = { version = "4.0.1", default-features = false, features = ["bitstream-io"] }
 hevc_parser = { version = "0.6.10", features = ["hevc_io"] }
 
@@ -30,8 +31,11 @@ path = "src/main.rs"
 
 [workspace]
 members = [
+    ".",
     "hdr10plus",
+    "av1_parser",
 ]
+resolver = "2"
 
 [features]
 default = ["system-font"]
