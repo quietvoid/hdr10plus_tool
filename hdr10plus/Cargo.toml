@@ -9,8 +9,8 @@ description = "HDR10+ metadata parsing and writing"
 repository = "https://github.com/quietvoid/hdr10plus_tool/tree/master/hdr10plus"
 
 [dependencies]
-bitvec_helpers = { version = "4.0.1", default-features = false, features = ["bitstream-io"] }
-hevc_parser = { version = "0.6.10", optional = true }
+bitvec_helpers = { version = "4.0.2", default-features = false, features = ["bitstream-io"] }
+hevc_parser = { version = "0.6.11", optional = true }
 
 anyhow = "1.0.102"
 serde = { version = "1.0.228", features = ["derive"], optional = true }
