@@ -110,9 +110,13 @@ pub fn generate_json(
 ) -> Value {
     let (profile, frame_json_list): (String, Vec<Value>) = json_list(metadata);
 
+    let version = metadata
+        .first()
+        .map(|meta| meta.application_version)
+        .unwrap_or(1);
     let json_info = json!({
         "HDR10plusProfile": profile,
-        "Version": format!("{}.0", &metadata[0].application_version),
+        "Version": format!("{}.0", version),
     });
 
     let first_frames: Vec<u64> = frame_json_list
